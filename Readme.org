@@ -1,0 +1,24 @@
+* indent-guide.el
+
+インデントを縦線で表示
+
+show vertical lines to guide indentation
+
+** Screencast
+
+[[screencast.gif]]
+
+** Usage
+
+Require this script
+
+: (require 'indent-guide)
+
+then indent-guide appears automatically.
+
+To set delay until the indent-guide appears, use function
+"indent-guide-set-delay".
+
+: (indent-guide-set-delay 1.0)
+
+Now indent-guide appears after 1.0 sec of idle time.
