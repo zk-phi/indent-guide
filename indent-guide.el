@@ -18,7 +18,7 @@
 
 ;; Author: zk_phi
 ;; URL: http://hins11.yu-yake.com/
-;; Version: 1.0.0
+;; Version: 1.0.1
 
 ;;; Commentary:
 
@@ -38,10 +38,16 @@
 ;;; Change Log:
 
 ;; 1.0.0 first released
+;; 1.0.1 cleaned and optimized
+;;       works better for the file without trailing-whitespaces
+
+;;; Known limitations, bugs:
+
+;; o works not perfectly with "hl-line".
 
 ;;; Code:
 
-(defconst indent-guide-version "1.0.0")
+(defconst indent-guide-version "1.0.1")
 
 ;; * variables / faces
 
@@ -50,12 +56,56 @@
 
 (make-face 'indent-guide-face)
 (set-face-attribute 'indent-guide-face nil
-                    :foreground "#555555")
+                    :foreground "#535353")
 
 (defun indent-guide-set-delay (sec)
   "change delay until the indent-guide appears"
   (timer-set-idle-time indent-guide-timer-object
                        sec t))
+
+;; * private functions
+
+(defun indent-guide--indent-list (beg end)
+  (save-excursion
+    (let ((lst nil))
+      (goto-char end)
+      (while (< beg (point))
+        (back-to-indentation)
+        (setq lst (cons (if (eolp) nil (current-column))
+                        lst))
+        (vertical-motion -1))
+      (back-to-indentation)
+      (setq lst (cons (current-column) lst)))))
+
+(defun indent-guide--guide-strings (indent-list)
+  (flet ((set-nth (n lst val)
+                  (if (zerop n)
+                      (setcar lst val)
+                    (set-nth (1- n) (cdr lst) val)))
+         (guides (indent-list)
+                 (let ((active nil)
+                       (coming indent-list)
+                       (guides nil))
+                   (dotimes (n (length indent-list))
+                     (let ((current (car coming)))
+                       (if (null current)
+                           (setq guides (cons active guides))
+                         (setq active (delq nil
+                                            (mapcar (lambda (x) (and (< x current) x))
+                                                    active)))
+                         (setq guides (cons active guides))
+                         (add-to-list 'active current t))
+                       (setq coming (cdr coming))))
+                   (reverse guides)))
+         (guide-string (guide)
+                       (if (null guide) ""
+                         (let* ((length (1+ (eval `(max ,@guide))))
+                                (str (make-list length " ")))
+                           (dolist (n guide)
+                             (set-nth n str "|"))
+                           (eval `(concat ,@str))))))
+    (let ((guides (guides indent-list)))
+      (mapcar 'guide-string guides))))
 
 ;; * show or hide indent-guides
 
@@ -63,45 +113,29 @@
   (delq nil
         (mapcar
          (lambda (ov)
-           (and (string= (overlay-get ov 'before-string) "|")
-                ov))
+           (and (eq (overlay-get ov 'category) 'indent-guide) ov))
          (overlays-in beg end))))
 
 (defun indent-guide-show (beg end)
-  (flet ((indent-list ()
-                      (let ((lst nil))
-                        (goto-char end)
-                        (while (< beg (point))
-                          (back-to-indentation)
-                          (setq lst (cons (current-column) lst))
-                          (forward-line -1))
-                        (back-to-indentation)
-                        (setq lst (cons (current-column) lst))))
-         (make-line (col lst)
-                    (when (and lst (< col (car lst)))
-                      (vertical-motion (cons col 1))
-                      (let ((ovs (delq nil
-                                       (mapcar
-                                        (lambda (ov)
-                                          (and (string= (overlay-get ov 'before-string) "|")
-                                               ov))
-                                        (overlays-at (1- (point))))))
-                            ov)
-                        (when ovs
-                          (setq ov (car ovs))
-                          (move-overlay ov (overlay-start ov) (1+ (overlay-end ov))))
-                        (setq ov (make-overlay (point) (1+ (point))))
-                        (overlay-put ov 'invisible t)
-                        (overlay-put ov 'before-string
-                                     (propertize "|" 'face 'indent-guide-face)))
-                      (make-line col (cdr lst)))))
-    (unless (indent-guide-overlays beg end)
-      (save-excursion
-        (let ((lst (indent-list)))
-          (dotimes (elem (length lst))
-            (goto-char beg)
-            (when (> elem 0) (vertical-motion elem))
-            (make-line (nth elem lst) (nthcdr (1+ elem) lst))))))))
+  (unless (indent-guide-overlays beg end)
+    (save-excursion
+      (let* ((indent-list (indent-guide--indent-list beg end))
+             (string-list (indent-guide--guide-strings indent-list))
+             ov)
+        (goto-char beg)
+        (dotimes (n (1- (length indent-list)))
+          (setq indent-list (cdr indent-list)
+                string-list (cdr string-list))
+          (cond ((null (car indent-list))
+                 (vertical-motion 1)
+                 (setq ov (make-overlay (1- (point)) (point))))
+                (t
+                 (vertical-motion (cons (length (car string-list)) 1))
+                 (setq ov (make-overlay (point-at-bol) (point)))
+                 (overlay-put ov 'invisible t)))
+          (overlay-put ov 'category 'indent-guide)
+          (overlay-put ov 'after-string
+                       (propertize (car string-list) 'face 'indent-guide-face)))))))
 
 (defun indent-guide-remove (beg end)
   (dolist (ov (indent-guide-overlays beg end))
