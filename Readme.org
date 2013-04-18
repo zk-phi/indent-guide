@@ -23,7 +23,7 @@ To set delay until the indent-guide appears, use function
 
 Now indent-guide appears after 1.0 sec of idle time.
 
-Column lines have "indent-guide-face". So you may configure this face
-to make liens more pretty in your colorscheme.
+Column lines are applied "indent-guide-face". So you may configure
+this face to make liens more pretty in your colorscheme.
 
 : (set-face-background 'indent-guide-face "dimgray")

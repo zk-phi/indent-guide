@@ -18,7 +18,7 @@
 
 ;; Author: zk_phi
 ;; URL: http://hins11.yu-yake.com/
-;; Version: 1.0.1
+;; Version: 1.0.2
 
 ;;; Commentary:
 
@@ -35,11 +35,17 @@
 ;;
 ;; Now indent-guide appears after 1.0 sec of idle time.
 
+;; Column lines are applied "indent-guide-face". So you may configure
+;; this face to make liens more pretty in your colorscheme.
+;;
+;;   (set-face-background 'indent-guide-face "dimgray")
+
 ;;; Change Log:
 
 ;; 1.0.0 first released
-;; 1.0.1 cleaned and optimized
+;; 1.0.1 cleaned and optimized code
 ;;       works better for the file without trailing-whitespaces
+;; 1.0.2 modified behavior for lines with only whitespaces
 
 ;;; Known limitations, bugs:
 
@@ -47,7 +53,7 @@
 
 ;;; Code:
 
-(defconst indent-guide-version "1.0.1")
+(defconst indent-guide-version "1.0.2")
 
 ;; * variables / faces
 
@@ -69,10 +75,12 @@
   (save-excursion
     (let ((lst nil))
       (goto-char end)
+      (beginning-of-line)
       (while (< beg (point))
-        (back-to-indentation)
-        (setq lst (cons (if (eolp) nil (current-column))
-                        lst))
+        (setq lst (cons
+                   (if (eolp) nil
+                     (progn (back-to-indentation) (current-column)))
+                   lst))
         (vertical-motion -1))
       (back-to-indentation)
       (setq lst (cons (current-column) lst)))))
@@ -128,13 +136,16 @@
                 string-list (cdr string-list))
           (cond ((null (car indent-list))
                  (vertical-motion 1)
-                 (setq ov (make-overlay (1- (point)) (point))))
+                 (if (eolp)
+                     (setq ov (make-overlay (point) (1+ (point))))
+                   (setq ov (make-overlay (point) (point-at-eol)))
+                   (overlay-put ov 'invisible t)))
                 (t
                  (vertical-motion (cons (length (car string-list)) 1))
                  (setq ov (make-overlay (point-at-bol) (point)))
                  (overlay-put ov 'invisible t)))
           (overlay-put ov 'category 'indent-guide)
-          (overlay-put ov 'after-string
+          (overlay-put ov 'before-string
                        (propertize (car string-list) 'face 'indent-guide-face)))))))
 
 (defun indent-guide-remove (beg end)
@@ -158,11 +169,11 @@
 
 (defun indent-guide-update ()
   (unless (active-minibuffer-window)
-   (save-excursion
-     (ignore-errors (forward-char))        ; *FIXME*
-     (let* ((beg (indent-guide-beginning-of-defun))
-            (end (indent-guide-end-of-defun)))
-       (indent-guide-show beg end)))))
+    (save-excursion
+      (ignore-errors (forward-char))        ; *FIXME*
+      (let* ((beg (indent-guide-beginning-of-defun))
+             (end (indent-guide-end-of-defun)))
+        (indent-guide-show beg end)))))
 
 (defun indent-guide-pre-command ()
   (save-excursion
