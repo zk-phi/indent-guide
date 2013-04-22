@@ -57,6 +57,16 @@
 
 (defconst indent-guide-version "1.0.4")
 
+;; * customs
+
+(defgroup indent-guide nil
+  "show vertical lines to guide indentation"
+  :group 'emacs)
+
+(defcustom indent-guide-char "|"
+  "character used as vertical line"
+  :group 'indent-guide)
+
 ;; * variables / faces
 
 (defvar indent-guide-timer-object
@@ -70,9 +80,6 @@
   "change delay until the indent-guide appears"
   (timer-set-idle-time indent-guide-timer-object
                        sec t))
-
-(defcustom indent-guide-char "|"
-  "character used as vertical line")
 
 ;; * private functions
 
