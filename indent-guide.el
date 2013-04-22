@@ -18,7 +18,7 @@
 
 ;; Author: zk_phi
 ;; URL: http://hins11.yu-yake.com/
-;; Version: 1.0.2
+;; Version: 1.0.3
 
 ;;; Commentary:
 
@@ -46,6 +46,7 @@
 ;; 1.0.1 cleaned and optimized code
 ;;       works better for the file without trailing-whitespaces
 ;; 1.0.2 modified behavior for lines with only whitespaces
+;; 1.0.3 Allow custom indent guide char
 
 ;;; Known limitations, bugs:
 
@@ -53,12 +54,14 @@
 
 ;;; Code:
 
-(defconst indent-guide-version "1.0.2")
+(defconst indent-guide-version "1.0.3")
 
 ;; * variables / faces
 
 (defvar indent-guide-timer-object
   (run-with-idle-timer 0.6 t 'indent-guide-update))
+
+(defvar indent-guide-char "|")
 
 (make-face 'indent-guide-face)
 (set-face-attribute 'indent-guide-face nil
@@ -110,7 +113,7 @@
                          (let* ((length (1+ (eval `(max ,@guide))))
                                 (str (make-list length " ")))
                            (dolist (n guide)
-                             (set-nth n str "|"))
+                             (set-nth n str 'indent-guide-char))
                            (eval `(concat ,@str))))))
     (let ((guides (guides indent-list)))
       (mapcar 'guide-string guides))))
