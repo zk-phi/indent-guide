@@ -18,7 +18,7 @@
 
 ;; Author: zk_phi
 ;; URL: http://hins11.yu-yake.com/
-;; Version: 1.0.3
+;; Version: 1.0.4
 
 ;;; Commentary:
 
@@ -47,6 +47,7 @@
 ;;       works better for the file without trailing-whitespaces
 ;; 1.0.2 modified behavior for lines with only whitespaces
 ;; 1.0.3 Allow custom indent guide char
+;; 1.0.4 disabled in org-indent-mode
 
 ;;; Known limitations, bugs:
 
@@ -54,14 +55,12 @@
 
 ;;; Code:
 
-(defconst indent-guide-version "1.0.3")
+(defconst indent-guide-version "1.0.4")
 
 ;; * variables / faces
 
 (defvar indent-guide-timer-object
   (run-with-idle-timer 0.6 t 'indent-guide-update))
-
-(defvar indent-guide-char "|")
 
 (make-face 'indent-guide-face)
 (set-face-attribute 'indent-guide-face nil
@@ -71,6 +70,9 @@
   "change delay until the indent-guide appears"
   (timer-set-idle-time indent-guide-timer-object
                        sec t))
+
+(defvar indent-guide-char "|"
+   "character used as vertical line")
 
 ;; * private functions
 
@@ -113,7 +115,7 @@
                          (let* ((length (1+ (eval `(max ,@guide))))
                                 (str (make-list length " ")))
                            (dolist (n guide)
-                             (set-nth n str 'indent-guide-char))
+                             (set-nth n str indent-guide-char))
                            (eval `(concat ,@str))))))
     (let ((guides (guides indent-list)))
       (mapcar 'guide-string guides))))
@@ -171,7 +173,8 @@
       (goto-char (point-max))))
 
 (defun indent-guide-update ()
-  (unless (active-minibuffer-window)
+  (unless (or (and (boundp 'org-indent-mode) org-indent-mode)
+              (active-minibuffer-window))
     (save-excursion
       (ignore-errors (forward-char))        ; *FIXME*
       (let* ((beg (indent-guide-beginning-of-defun))
@@ -180,10 +183,11 @@
 
 (defun indent-guide-pre-command ()
   (save-excursion
-    (ignore-errors (forward-char))        ; *FIXME*
-    (let* ((beg (indent-guide-beginning-of-defun))
-           (end (indent-guide-end-of-defun)))
-      (indent-guide-remove beg end))))
+    ;; (ignore-errors (forward-char))        ; *FIXME*
+    ;; (let* ((beg (indent-guide-beginning-of-defun))
+    ;;        (end (indent-guide-end-of-defun)))
+    ;;   (indent-guide-remove beg end))
+    (indent-guide-remove (point-min) (point-max))))
 
 (add-hook 'pre-command-hook 'indent-guide-pre-command)
 
