@@ -71,8 +71,8 @@
   (timer-set-idle-time indent-guide-timer-object
                        sec t))
 
-(defvar indent-guide-char "|"
-   "character used as vertical line")
+(defcustom indent-guide-char "|"
+  "character used as vertical line")
 
 ;; * private functions
 
