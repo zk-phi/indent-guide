@@ -146,26 +146,32 @@
              (end (window-end))
              ov)
         (goto-char beg)
+        ;; ignore the 0th element
+        (setq indent-list (cdr indent-list)
+              string-list (cdr string-list))
+        (vertical-motion 1)
+        ;; skip lines before window-start
         (while (< (point) start)
           (setq indent-list (cdr indent-list)
                 string-list (cdr string-list))
           (vertical-motion 1))
+        ;; draw indent-guide
         (while (and indent-list (< (point) end))
-          (setq indent-list (cdr indent-list)
-                string-list (cdr string-list))
           (cond ((null (car indent-list))
-                 (vertical-motion 1)
                  (if (eolp)
                      (setq ov (make-overlay (point) (1+ (point))))
                    (setq ov (make-overlay (point) (point-at-eol)))
                    (overlay-put ov 'invisible t)))
                 (t
-                 (vertical-motion (cons (length (car string-list)) 1))
+                 (forward-char (length (car string-list)))
                  (setq ov (make-overlay (point-at-bol) (point)))
                  (overlay-put ov 'invisible t)))
           (overlay-put ov 'category 'indent-guide)
           (overlay-put ov 'before-string
-                       (propertize (car string-list) 'face 'indent-guide-face)))))))
+                       (propertize (car string-list) 'face 'indent-guide-face))
+          (setq indent-list (cdr indent-list)
+                string-list (cdr string-list))
+          (vertical-motion 1))))))
 
 (defun indent-guide-remove (beg end)
   (dolist (ov (indent-guide-overlays beg end))
