@@ -141,9 +141,15 @@
     (save-excursion
       (let* ((indent-list (indent-guide--indent-list beg end))
              (string-list (indent-guide--guide-strings indent-list))
+             (start (window-start))
+             (end (window-end))
              ov)
         (goto-char beg)
-        (dotimes (n (1- (length indent-list)))
+        (while (< (point) start)
+          (setq indent-list (cdr indent-list)
+                string-list (cdr string-list))
+          (vertical-motion 1))
+        (while (and indent-list (< (point) end))
           (setq indent-list (cdr indent-list)
                 string-list (cdr string-list))
           (cond ((null (car indent-list))
@@ -185,7 +191,7 @@
     (save-excursion
       (ignore-errors (forward-char))        ; *FIXME*
       (let* ((beg (indent-guide-beginning-of-defun))
-             (end (indent-guide-end-of-defun)))
+             (end (min (indent-guide-end-of-defun) (window-end))))
         (indent-guide-show beg end)))))
 
 (defun indent-guide-pre-command ()
