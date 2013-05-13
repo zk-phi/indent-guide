@@ -18,7 +18,7 @@
 
 ;; Author: zk_phi
 ;; URL: http://hins11.yu-yake.com/
-;; Version: 1.0.4
+;; Version: 1.0.5
 
 ;;; Commentary:
 
@@ -48,6 +48,7 @@
 ;; 1.0.2 modified behavior for lines with only whitespaces
 ;; 1.0.3 Allow custom indent guide char
 ;; 1.0.4 disabled in org-indent-mode
+;; 1.0.5 faster update of indent-guide
 
 ;;; Known limitations, bugs:
 
@@ -55,7 +56,7 @@
 
 ;;; Code:
 
-(defconst indent-guide-version "1.0.4")
+(defconst indent-guide-version "1.0.5")
 
 ;; * customs
 
