@@ -18,7 +18,7 @@
 
 ;; Author: zk_phi
 ;; URL: http://hins11.yu-yake.com/
-;; Version: 1.1.0
+;; Version: 1.1.1
 
 ;;; Commentary:
 
@@ -26,19 +26,28 @@
 ;;
 ;;   (require 'indent-guide)
 ;;
-;; then indent-guide appears automatically.
+;; and call command "indent-guide-mode".
 
-;; To set delay until the indent-guide appears, use function
+;; If you want to enable indent-guide-mode in all buffers,
+;; set the default value of "indent-guide-mode" non-nil.
+;;
+;;   (setq-default indent-guide-mode t)
+
+;; To change delay until the indent-guide appears, use function
 ;; "indent-guide-set-delay".
 ;;
 ;;   (indent-guide-set-delay 1.0)
 ;;
 ;; Now indent-guide appears after 1.0 sec of idle time.
 
-;; Column lines are applied "indent-guide-face". So you may configure
-;; this face to make liens more pretty in your colorscheme.
+;; Column lines are propertized with "indent-guide-face". So you may
+;; configure this face to make guides more pretty in your colorscheme.
 ;;
 ;;   (set-face-background 'indent-guide-face "dimgray")
+;;
+;; You may also change the character for guides.
+;;
+;;   (setq indent-guide-char ":")
 
 ;;; Change Log:
 
@@ -50,6 +59,7 @@
 ;; 1.0.4 disabled in org-indent-mode
 ;; 1.0.5 faster update of indent-guide (especially for huge files)
 ;; 1.1.0 work with tab-indented files
+;; 1.1.1 now work as a minor-mode
 
 ;;; Known limitations, bugs:
 
@@ -57,7 +67,7 @@
 
 ;;; Code:
 
-(defconst indent-guide-version "1.1.0")
+(defconst indent-guide-version "1.1.1")
 
 ;; * customs
 
@@ -68,6 +78,16 @@
 (defcustom indent-guide-char "|"
   "character used as vertical line"
   :group 'indent-guide)
+
+;; * minor-modes
+
+(defvar indent-guide-mode nil)
+(make-variable-buffer-local 'indent-guide-mode)
+
+(defun indent-guide-mode (&optional arg)
+  (interactive)
+  (setq indent-guide-mode (if arg (< arg 0)
+                            (not indent-guide-mode))))
 
 ;; * variables / faces
 
@@ -206,8 +226,8 @@ if the last element is nil, then the last diff bocomes 1"
 
 (defun indent-guide-update ()
   (interactive)
-  (unless (or (and (boundp 'org-indent-mode) org-indent-mode)
-              (active-minibuffer-window))
+  (when (and indent-guide-mode
+             (not (active-minibuffer-window)))
     ;; back-to-indentation (if appropriate)
     (let ((point (save-excursion (back-to-indentation)
                                  (point))))

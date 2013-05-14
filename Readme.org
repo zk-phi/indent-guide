@@ -14,16 +14,25 @@ Require this script
 
 : (require 'indent-guide)
 
-then indent-guide appears automatically.
+and call command "indent-guide-mode".
 
-To set delay until the indent-guide appears, use function
+If you want to enable indent-guide-mode in all buffers, set the
+default value of "indent-guide-mode" non-nil.
+
+: (setq-default indent-guide-mode t)
+
+** Configuration
+
+To change delay until the indent-guide appears, use function
 "indent-guide-set-delay".
 
 : (indent-guide-set-delay 1.0)
 
 Now indent-guide appears after 1.0 sec of idle time.
 
-Column lines are applied "indent-guide-face". So you may configure
-this face to make liens more pretty in your colorscheme.
+Column lines are propertized with "indent-guide-face". So you may
+configure this face to make liens more pretty in your colorscheme.
 
 : (set-face-background 'indent-guide-face "dimgray")
+
+You may also change the character for guides.
