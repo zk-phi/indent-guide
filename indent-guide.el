@@ -18,7 +18,7 @@
 
 ;; Author: zk_phi
 ;; URL: http://hins11.yu-yake.com/
-;; Version: 1.1.1
+;; Version: 1.1.2
 
 ;;; Commentary:
 
@@ -32,6 +32,8 @@
 ;; set the default value of "indent-guide-mode" non-nil.
 ;;
 ;;   (setq-default indent-guide-mode t)
+;;
+;; in your init file.
 
 ;; To change delay until the indent-guide appears, use function
 ;; "indent-guide-set-delay".
@@ -59,7 +61,8 @@
 ;; 1.0.4 disabled in org-indent-mode
 ;; 1.0.5 faster update of indent-guide (especially for huge files)
 ;; 1.1.0 work with tab-indented files
-;; 1.1.1 now work as a minor-mode
+;; 1.1.1 turned into minor-mode
+;; 1.1.2 an infinite-loop bug fix
 
 ;;; Known limitations, bugs:
 
@@ -67,7 +70,7 @@
 
 ;;; Code:
 
-(defconst indent-guide-version "1.1.1")
+(defconst indent-guide-version "1.1.2")
 
 ;; * customs
 
@@ -87,7 +90,10 @@
 (defun indent-guide-mode (&optional arg)
   (interactive)
   (setq indent-guide-mode (if arg (< arg 0)
-                            (not indent-guide-mode))))
+                            (not indent-guide-mode)))
+  (message (if indent-guide-mode
+               "indent-guide-mode enabled"
+             "indent-guide-mode disabled")))
 
 ;; * variables / faces
 
@@ -155,7 +161,7 @@ if the last element is nil, then the last diff bocomes 1"
         (back-to-indentation)
         (setq res (cons (and (not (eolp)) (current-column))
                         res))
-        (vertical-motion 1))
+        (forward-line 1))
       (reverse res))))
 
 (defun indent-guide--indents->guides (indents)
@@ -210,7 +216,7 @@ if the last element is nil, then the last diff bocomes 1"
         ;; skip lines before window-start
         (while (< (point) wstart)
           (setq strings (cdr strings))
-          (vertical-motion 1))
+          (forward-line 1))
         ;; draw indent-guide
         (while (and strings (< (point) wend))
           (back-to-indentation)
@@ -220,7 +226,7 @@ if the last element is nil, then the last diff bocomes 1"
             (overlay-put ov 'before-string
                          (propertize (car strings) 'face 'indent-guide-face)))
           (setq strings (cdr strings))
-          (vertical-motion 1))))))
+          (forward-line 1))))))
 
 ;; * triggers
 
