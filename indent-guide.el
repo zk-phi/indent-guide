@@ -82,7 +82,7 @@
   "character used as vertical line"
   :group 'indent-guide)
 
-;; * minor-modes
+;; * minor-mode
 
 (defvar indent-guide-mode nil)
 (make-variable-buffer-local 'indent-guide-mode)
@@ -94,6 +94,9 @@
   (message (if indent-guide-mode
                "indent-guide-mode enabled"
              "indent-guide-mode disabled")))
+
+(when (not (assq 'indent-guide-mode minor-mode-alist))
+  (setq minor-mode-alist (cons '(indent-guide-mode " Ingd") minor-mode-alist)))
 
 ;; * variables / faces
 
