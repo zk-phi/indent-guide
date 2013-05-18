@@ -155,7 +155,7 @@
            (while (and (progn (back-to-indentation) t)
                        (or (< line-col (current-column)) (eolp))
                        (indent-guide--draw-line line-col)
-                       (zerop (forward-line 1))
+                       (progn (forward-line 1) (not (eobp)))
                        (<= (point) end)))))))))
 
 (defun indent-guide-remove ()
