@@ -18,7 +18,7 @@
 
 ;; Author: zk_phi
 ;; URL: http://hins11.yu-yake.com/
-;; Version: 2.0.0
+;; Version: 2.0.1
 
 ;;; Commentary:
 
@@ -58,10 +58,11 @@
 ;; 1.1.2 an infinite-loop bug fix
 ;; 1.1.3 changed behavior for blank lines
 ;; 2.0.0 rewrite almost everything
+;; 2.0.1 improve blank-line and tab handling
 
 ;;; Code:
 
-(defconst indent-guide-version "2.0.0")
+(defconst indent-guide-version "2.0.1")
 
 ;; * customs
 
@@ -106,30 +107,30 @@
 
 ;; * generate guides
 
-(defun indent-guide-remove ()
-  (dolist (ov (indent-guide--active-overlays))
-    (delete-overlay ov)))
-
 (defun indent-guide--draw-line (col)
   "draw \"indent-guide-char\" at the COLUMN in this line"
   (save-excursion
     (move-to-column col)
     (let ((diff (- (current-column) col))
           string ov)
-      (cond ((zerop diff)
-             (setq string indent-guide-char)
-             (setq ov (make-overlay (point) (1+ (point)))))
-            ((bolp)
-             (setq string (concat (make-string (1- col) ?\s)
+      (cond ((and (bolp) (eolp))        ; blank line
+             (setq string (concat (make-string col ?\s)
                                   indent-guide-char))
              (setq ov (make-overlay (point) (point))))
-            (t
-             (setq string (concat (make-string (- tab-width 1 diff) ?\s)
+            ((not (zerop diff))         ; looking back tab (unexpectedly)
+             (setq string (concat (make-string (- tab-width diff) ?\s)
                                   indent-guide-char
-                                  (make-string diff ?\s)))
-             (setq ov (make-overlay (1- (point)) (point)))))
-      (overlay-put ov 'category 'indent-guide)
+                                  (make-string (1- diff) ?\s)))
+             (setq ov (make-overlay (1- (point)) (point))))
+            ((looking-at "\t")          ; looking at tab
+             (setq string (concat indent-guide-char
+                                  (make-string (1- tab-width) ?\s)))
+             (setq ov (make-overlay (point) (1+ (point)))))
+            (t                          ; no problem
+             (setq string indent-guide-char)
+             (setq ov (make-overlay (point) (1+ (point))))))
       (overlay-put ov 'invisible t)
+      (overlay-put ov 'category 'indent-guide)
       (overlay-put ov 'before-string
                    (propertize string 'face 'indent-guide-face)))))
 
@@ -146,16 +147,21 @@
            ;; search column
            (while (and (zerop (forward-line -1))
                        (progn (back-to-indentation) t)
-                       (<= ind-col (current-column))))
+                       (or (<= ind-col (current-column)) (eolp))))
            (setq line-col (current-column))
            ;; draw line
            (while (and (zerop (forward-line 1))
                        (< (point) start)))
            (while (and (progn (back-to-indentation) t)
-                       (< line-col (current-column))
+                       (or (< line-col (current-column)) (eolp))
                        (indent-guide--draw-line line-col)
                        (zerop (forward-line 1))
                        (<= (point) end)))))))))
+
+(defun indent-guide-remove ()
+  (when indent-guide-mode
+    (dolist (ov (indent-guide--active-overlays))
+      (delete-overlay ov))))
 
 ;; * triggers
 
