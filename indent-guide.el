@@ -35,13 +35,6 @@
 ;;
 ;; in your init file.
 
-;; To change delay until the indent-guide appears, use function
-;; "indent-guide-set-delay".
-;;
-;;   (indent-guide-set-delay 1.0)
-;;
-;; Now indent-guide appears after 1.0 sec of idle time.
-
 ;; Column lines are propertized with "indent-guide-face". So you may
 ;; configure this face to make guides more pretty in your colorscheme.
 ;;
