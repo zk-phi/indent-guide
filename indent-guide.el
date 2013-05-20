@@ -18,7 +18,7 @@
 
 ;; Author: zk_phi
 ;; URL: http://hins11.yu-yake.com/
-;; Version: 2.0.1
+;; Version: 2.0.2
 
 ;;; Commentary:
 
@@ -59,10 +59,11 @@
 ;; 1.1.3 changed behavior for blank lines
 ;; 2.0.0 rewrite almost everything
 ;; 2.0.1 improve blank-line and tab handling
+;; 2.0.2 fixed bug that sometimes newline gets invisible
 
 ;;; Code:
 
-(defconst indent-guide-version "2.0.1")
+(defconst indent-guide-version "2.0.2")
 
 ;; * customs
 
@@ -113,8 +114,8 @@
     (move-to-column col)
     (let ((diff (- (current-column) col))
           string ov)
-      (cond ((and (bolp) (eolp))        ; blank line
-             (setq string (concat (make-string col ?\s)
+      (cond ((eolp)                     ; blank line (with or without indent)
+             (setq string (concat (make-string (- diff) ?\s)
                                   indent-guide-char))
              (setq ov (make-overlay (point) (point))))
             ((not (zerop diff))         ; looking back tab (unexpectedly)
