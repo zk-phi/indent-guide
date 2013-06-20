@@ -26,14 +26,12 @@
 ;;
 ;;   (require 'indent-guide)
 ;;
-;; and call command "indent-guide-mode".
+;; and call command "M-x indent-guide-mode".
 
-;; If you want to enable indent-guide-mode in all buffers,
-;; set the default value of "indent-guide-mode" non-nil.
+;; If you want to enable indent-guide-mode automatically,
+;; call "indent-guide-global-mode" function.
 ;;
-;;   (setq-default indent-guide-mode t)
-;;
-;; in your init file.
+;;   (indent-guide-global-mode)
 
 ;; Column lines are propertized with "indent-guide-face". So you may
 ;; configure this face to make guides more pretty in your colorscheme.
@@ -77,19 +75,21 @@
 
 ;; * minor-mode
 
-(defvar indent-guide-mode nil)
-(make-variable-buffer-local 'indent-guide-mode)
+(define-minor-mode indent-guide-mode
+  "show vertical lines to guide indentation"
+  :init-value nil
+  :lighter " ing"
+  :global nil
+  (if indent-guide-mode
+      (progn
+        (add-hook 'pre-command-hook 'indent-guide-remove nil t)
+        (add-hook 'post-command-hook 'indent-guide-show nil t))
+    (remove-hook 'pre-command-hook 'indent-guide-remove t)
+    (remove-hook 'post-command-hook 'indent-guide-show t)))
 
-(defun indent-guide-mode (&optional arg)
-  (interactive)
-  (setq indent-guide-mode (if arg (< arg 0)
-                            (not indent-guide-mode)))
-  (message (if indent-guide-mode
-               "indent-guide-mode enabled"
-             "indent-guide-mode disabled")))
-
-(when (not (assq 'indent-guide-mode minor-mode-alist))
-  (setq minor-mode-alist (cons '(indent-guide-mode " Ingd") minor-mode-alist)))
+(define-globalized-minor-mode indent-guide-global-mode
+  indent-guide-mode
+  (lambda () (indent-guide-mode 1)))
 
 ;; * variables / faces
 
@@ -136,38 +136,31 @@
                    (propertize string 'face 'indent-guide-face)))))
 
 (defun indent-guide-show ()
-  (when indent-guide-mode
-   (unless (or (indent-guide--active-overlays)
-               (active-minibuffer-window))
-     (save-excursion
-       (let ((start (window-start))
-             (end (window-end))
-             (ind-col (progn (back-to-indentation) (current-column)))
-             line-col)
-         (unless (zerop ind-col)
-           ;; search column
-           (while (and (zerop (forward-line -1))
-                       (progn (back-to-indentation) t)
-                       (or (<= ind-col (current-column)) (eolp))))
-           (setq line-col (current-column))
-           ;; draw line
-           (while (and (zerop (forward-line 1))
-                       (< (point) start)))
-           (while (and (progn (back-to-indentation) t)
-                       (or (< line-col (current-column)) (eolp))
-                       (indent-guide--draw-line line-col)
-                       (progn (forward-line 1) (not (eobp)))
-                       (<= (point) end)))))))))
+  (unless (or (indent-guide--active-overlays)
+              (active-minibuffer-window))
+    (save-excursion
+      (let ((start (window-start))
+            (end (window-end))
+            (ind-col (progn (back-to-indentation) (current-column)))
+            line-col)
+        (unless (zerop ind-col)
+          ;; search column
+          (while (and (zerop (forward-line -1))
+                      (progn (back-to-indentation) t)
+                      (or (<= ind-col (current-column)) (eolp))))
+          (setq line-col (current-column))
+          ;; draw line
+          (while (and (zerop (forward-line 1))
+                      (< (point) start)))
+          (while (and (progn (back-to-indentation) t)
+                      (or (< line-col (current-column)) (eolp))
+                      (indent-guide--draw-line line-col)
+                      (progn (forward-line 1) (not (eobp)))
+                      (<= (point) end))))))))
 
 (defun indent-guide-remove ()
-  (when indent-guide-mode
-    (dolist (ov (indent-guide--active-overlays))
-      (delete-overlay ov))))
-
-;; * triggers
-
-(add-hook 'pre-command-hook 'indent-guide-remove)
-(add-hook 'post-command-hook 'indent-guide-show)
+  (dolist (ov (indent-guide--active-overlays))
+    (delete-overlay ov)))
 
 ;; * provide
 
