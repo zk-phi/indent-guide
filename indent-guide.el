@@ -18,7 +18,7 @@
 
 ;; Author: zk_phi
 ;; URL: http://hins11.yu-yake.com/
-;; Version: 2.0.2
+;; Version: 2.0.3
 
 ;;; Commentary:
 
@@ -58,10 +58,11 @@
 ;; 2.0.0 rewrite almost everything
 ;; 2.0.1 improve blank-line and tab handling
 ;; 2.0.2 fixed bug that sometimes newline gets invisible
+;; 2.0.3 added indent-guide-global-mode
 
 ;;; Code:
 
-(defconst indent-guide-version "2.0.2")
+(defconst indent-guide-version "2.0.3")
 
 ;; * customs
 
