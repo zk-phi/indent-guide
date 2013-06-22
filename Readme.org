@@ -29,3 +29,6 @@ configure this face to make liens more pretty in your colorscheme.
 : (set-face-background 'indent-guide-face "dimgray")
 
 You may also change the character for guides.
+
+: (setq indent-guide-char ":")
+
