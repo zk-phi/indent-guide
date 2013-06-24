@@ -59,7 +59,7 @@
 ;; 2.0.1 improve blank-line and tab handling
 ;; 2.0.2 fixed bug that sometimes newline gets invisible
 ;; 2.0.3 added indent-guide-global-mode
-;; 2.1.0 much less intrusive way of drawling lines
+;; 2.1.0 now lines are not drawn over the cursor
 
 ;;; Code:
 
