@@ -18,7 +18,7 @@
 
 ;; Author: zk_phi
 ;; URL: http://hins11.yu-yake.com/
-;; Version: 2.0.3
+;; Version: 2.1.0
 
 ;;; Commentary:
 
@@ -59,10 +59,11 @@
 ;; 2.0.1 improve blank-line and tab handling
 ;; 2.0.2 fixed bug that sometimes newline gets invisible
 ;; 2.0.3 added indent-guide-global-mode
+;; 2.1.0 much less intrusive way of drawling lines
 
 ;;; Code:
 
-(defconst indent-guide-version "2.0.3")
+(defconst indent-guide-version "2.1.0")
 
 ;; * customs
 
@@ -109,55 +110,71 @@
 
 ;; * generate guides
 
-(defun indent-guide--draw-line (col)
-  "draw \"indent-guide-char\" at the COLUMN in this line"
-  (save-excursion
-    (move-to-column col)
-    (let ((diff (- (current-column) col))
-          string ov)
+(defun indent-guide--make-overlay (line col)
+  (let ((original-pos (point))
+        diff string ov)
+    (save-excursion
+      ;; try to goto (line, col)
+      (goto-char (point-min))
+      (forward-line (1- line))
+      (move-to-column col)
+      ;; calculate difference from the actual (line, col)
+      (setq diff (- (current-column) col))
+      ;; make overlay or not
       (cond ((eolp)                     ; blank line (with or without indent)
              (setq string (concat (make-string (- diff) ?\s)
-                                  indent-guide-char))
-             (setq ov (make-overlay (point) (point))))
-            ((not (zerop diff))         ; looking back tab (unexpectedly)
+                                  indent-guide-char)
+                   ov     (and (not (= (point) original-pos))
+                               (make-overlay (point) (point)))))
+            ((not (zerop diff))         ; looking back tab
              (setq string (concat (make-string (- tab-width diff) ?\s)
                                   indent-guide-char
-                                  (make-string (1- diff) ?\s)))
-             (setq ov (make-overlay (1- (point)) (point))))
+                                  (make-string (1- diff) ?\s))
+                   ov     (and (not (= (point) (1- original-pos)))
+                               (make-overlay (point) (1- (point))))))
             ((looking-at "\t")          ; looking at tab
              (setq string (concat indent-guide-char
-                                  (make-string (1- tab-width) ?\s)))
-             (setq ov (make-overlay (point) (1+ (point)))))
+                                  (make-string (1- tab-width) ?\s))
+                   ov     (and (not (= (point) original-pos))
+                               (make-overlay (point) (1+ (point))))))
             (t                          ; no problem
-             (setq string indent-guide-char)
-             (setq ov (make-overlay (point) (1+ (point))))))
-      (overlay-put ov 'invisible t)
-      (overlay-put ov 'category 'indent-guide)
-      (overlay-put ov 'before-string
-                   (propertize string 'face 'indent-guide-face)))))
+             (setq string indent-guide-char
+                   ov     (and (not (= (point) original-pos))
+                               (make-overlay (point) (1+ (point)))))))
+      (when ov
+        (overlay-put ov 'invisible t)
+        (overlay-put ov 'category 'indent-guide)
+        (overlay-put ov 'before-string
+                     (propertize string 'face 'indent-guide-face))))))
 
 (defun indent-guide-show ()
   (unless (or (indent-guide--active-overlays)
               (active-minibuffer-window))
-    (save-excursion
-      (let ((start (window-start))
-            (end (window-end))
-            (ind-col (progn (back-to-indentation) (current-column)))
-            line-col)
-        (unless (zerop ind-col)
-          ;; search column
+    (let ((win-start (window-start))
+          (win-end (window-end))
+          (current-col (save-excursion (back-to-indentation)
+                                       (current-column)))
+          line-col line-start line-end tmp)
+      (unless (zerop current-col)
+        ;; decide line-start and line-col
+        (save-excursion
           (while (and (zerop (forward-line -1))
                       (progn (back-to-indentation) t)
-                      (or (<= ind-col (current-column)) (eolp))))
+                      (or (<= current-col (current-column)) (eolp))))
           (setq line-col (current-column))
-          ;; draw line
           (while (and (zerop (forward-line 1))
-                      (< (point) start)))
+                      (< (point) win-start)))
+          (setq line-start (line-number-at-pos)))
+        ;; decide line-end
+        (save-excursion
           (while (and (progn (back-to-indentation) t)
                       (or (< line-col (current-column)) (eolp))
-                      (indent-guide--draw-line line-col)
                       (progn (forward-line 1) (not (eobp)))
-                      (<= (point) end))))))))
+                      (<= (point) win-end)))
+          (setq line-end (line-number-at-pos)))
+        ;; draw lines
+        (dotimes (tmp (- line-end line-start))
+          (indent-guide--make-overlay (+ line-start tmp) line-col))))))
 
 (defun indent-guide-remove ()
   (dolist (ov (indent-guide--active-overlays))
