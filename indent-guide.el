@@ -18,7 +18,7 @@
 
 ;; Author: zk_phi
 ;; URL: http://hins11.yu-yake.com/
-;; Version: 2.1.0
+;; Version: 2.1.1
 
 ;;; Commentary:
 
@@ -60,10 +60,11 @@
 ;; 2.0.2 fixed bug that sometimes newline gets invisible
 ;; 2.0.3 added indent-guide-global-mode
 ;; 2.1.0 now lines are not drawn over the cursor
+;; 2.1.1 work better with blank lines
 
 ;;; Code:
 
-(defconst indent-guide-version "2.1.0")
+(defconst indent-guide-version "2.1.1")
 
 ;; * customs
 
@@ -107,6 +108,14 @@
          (lambda (ov)
            (and (eq (overlay-get ov 'category) 'indent-guide) ov))
          (overlays-in (point-min) (point-max)))))
+
+(defun indent-guide--current-column ()
+  (save-excursion
+    (back-to-indentation)
+    (if (not (eolp))
+        (current-column)
+      (forward-line -1)
+      (indent-guide--current-column))))
 
 ;; * generate guides
 
@@ -152,8 +161,7 @@
               (active-minibuffer-window))
     (let ((win-start (window-start))
           (win-end (window-end))
-          (current-col (save-excursion (back-to-indentation)
-                                       (current-column)))
+          (current-col (indent-guide--current-column))
           line-col line-start line-end tmp)
       (unless (zerop current-col)
         ;; decide line-start and line-col
