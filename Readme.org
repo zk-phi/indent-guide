@@ -32,3 +32,6 @@ You may also change the character for guides.
 
 : (setq indent-guide-char ":")
 
+** Known Limitations
+
+- doesn't work with linum.el
