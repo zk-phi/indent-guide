@@ -35,3 +35,4 @@ You may also change the character for guides.
 ** Known Limitations
 
 - doesn't work with linum.el
+- doesn't work perfectly with pager.el
