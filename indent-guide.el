@@ -18,7 +18,7 @@
 
 ;; Author: zk_phi
 ;; URL: http://hins11.yu-yake.com/
-;; Version: 2.1.1
+;; Version: 2.1.2
 
 ;;; Commentary:
 
@@ -61,6 +61,7 @@
 ;; 2.0.3 added indent-guide-global-mode
 ;; 2.1.0 now lines are not drawn over the cursor
 ;; 2.1.1 work better with blank lines
+;; 2.1.2 fixed bug in empty files
 
 ;;; Code:
 
@@ -112,10 +113,13 @@
 (defun indent-guide--current-column ()
   (save-excursion
     (back-to-indentation)
-    (if (not (eolp))
-        (current-column)
-      (forward-line -1)
-      (indent-guide--current-column))))
+    (cond ((not (eolp))
+           (current-column))
+          ((progn (forward-line -1)
+                  (bobp))
+           0)
+          (t
+           (indent-guide--current-column)))))
 
 ;; * generate guides
 
