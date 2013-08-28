@@ -34,5 +34,8 @@ You may also change the character for guides.
 
 ** Known Limitations
 
-- doesn't work with linum.el
-- doesn't work perfectly with pager.el
+- does not work perfectly with following modes (commands) :
+  + linum-mode
+  + hl-line-mode
+  + transient-mark-moe
+  + commands in pager.el

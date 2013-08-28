@@ -138,10 +138,10 @@
       (goto-char (point-min))
       (forward-line (1- line))
       (move-to-column col)
-      ;; calculate difference from the actual (line, col)
+      ;; calculate difference from the actual col
       (setq diff (- (current-column) col))
       ;; make overlay or not
-      (cond ((eolp)                     ; blank line (with or without indent)
+      (cond ((eolp)                     ; blank line (with no or less indent)
              (setq string (concat (make-string (- diff) ?\s)
                                   indent-guide-char)
                    ov     (and (not (= (point) original-pos))
