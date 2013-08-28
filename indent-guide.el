@@ -116,13 +116,11 @@
     (if (not (eolp))
         (current-column)
       (let ((forward (save-excursion
-                       (if (zerop (forward-line 1))
-                           (indent-guide--current-column)
-                         0)))
+                       (if (zerop (vertical-motion 1))
+                           0 (indent-guide--current-column))))
             (backward (save-excursion
-                        (if (zerop (forward-line -1))
-                            (indent-guide--current-column)
-                          0))))
+                        (if (zerop (vertical-motion -1))
+                            0 (indent-guide--current-column)))))
         (max forward backward)))))
 
 ;; * generate guides
