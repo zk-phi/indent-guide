@@ -18,7 +18,7 @@
 
 ;; Author: zk_phi
 ;; URL: http://hins11.yu-yake.com/
-;; Version: 2.1.2
+;; Version: 2.1.3
 
 ;;; Commentary:
 
@@ -62,10 +62,11 @@
 ;; 2.1.0 now lines are not drawn over the cursor
 ;; 2.1.1 work better with blank lines
 ;; 2.1.2 fixed bug in empty files
+;; 2.1.3 better bob and eob handling
 
 ;;; Code:
 
-(defconst indent-guide-version "2.1.2")
+(defconst indent-guide-version "2.1.3")
 
 ;; * customs
 
@@ -110,22 +111,40 @@
            (and (eq (overlay-get ov 'category) 'indent-guide) ov))
          (overlays-in (point-min) (point-max)))))
 
-(defun indent-guide--current-column ()
-  (save-excursion
+(defun indent-guide--beginning-of-level (&optional origin)
+  ;; origin <- indent column of current line
+  (unless origin
     (back-to-indentation)
     (if (not (eolp))
-        (current-column)
+        (setq origin (current-column))
       (let ((forward (save-excursion
-                       (if (zerop (vertical-motion 1))
-                           0 (indent-guide--current-column))))
+                       (while (and (forward-line 1)
+                                   (not (eobp))
+                                   (progn (back-to-indentation) t)
+                                   (eolp)))
+                       (if (eobp) 0 (current-column))))
             (backward (save-excursion
-                        (if (zerop (vertical-motion -1))
-                            0 (indent-guide--current-column)))))
-        (max forward backward)))))
+                        (while (and (zerop (forward-line -1))
+                                    (progn (back-to-indentation) t)
+                                    (eolp)))
+                        (if (bobp) 0 (current-column)))))
+        (setq origin (max forward backward)))))
+  (cond ((zerop origin)
+         (point))
+        ((= (forward-line -1) -1)
+         nil)
+        ((progn
+           (back-to-indentation)
+           (and (not (eolp))
+                (< (current-column) origin)))
+         (point))
+        (t
+         (indent-guide--beginning-of-level origin))))
 
 ;; * generate guides
 
 (defun indent-guide--make-overlay (line col)
+  "draw line at (line, col)"
   (let ((original-pos (point))
         diff string ov)
     (save-excursion
@@ -167,28 +186,28 @@
               (active-minibuffer-window))
     (let ((win-start (window-start))
           (win-end (window-end))
-          (current-col (indent-guide--current-column))
-          line-col line-start line-end tmp)
-      (unless (zerop current-col)
-        ;; decide line-start and line-col
-        (save-excursion
-          (while (and (zerop (forward-line -1))
-                      (progn (back-to-indentation) t)
-                      (or (<= current-col (current-column)) (eolp))))
-          (setq line-col (current-column))
-          (while (and (zerop (forward-line 1))
-                      (< (point) win-start)))
-          (setq line-start (line-number-at-pos)))
-        ;; decide line-end
-        (save-excursion
-          (while (and (progn (back-to-indentation) t)
-                      (or (< line-col (current-column)) (eolp))
-                      (progn (forward-line 1) (not (eobp)))
-                      (<= (point) win-end)))
-          (setq line-end (line-number-at-pos)))
-        ;; draw lines
-        (dotimes (tmp (- line-end line-start))
-          (indent-guide--make-overlay (+ line-start tmp) line-col))))))
+          line-col line-start line-end)
+      ;; decide line-col, line-start
+      (save-excursion
+        (if (not (indent-guide--beginning-of-level))
+            (setq line-col 0
+                  line-start 1)
+          (setq line-col (current-column)
+                line-start (max (1+ (line-number-at-pos))
+                                (line-number-at-pos win-start)))))
+      ;; decide line-end
+      (save-excursion
+        (while (and (progn (back-to-indentation)
+                           (or (< line-col (current-column)) (eolp)))
+                    (forward-line 1)
+                    (not (eobp))
+                    (<= (point) win-end)))
+        (if (>= line-col (current-column))
+            (forward-line -1))
+        (setq line-end (line-number-at-pos)))
+      ;; draw line
+      (dotimes (tmp (- (1+ line-end) line-start))
+        (indent-guide--make-overlay (+ line-start tmp) line-col)))))
 
 (defun indent-guide-remove ()
   (dolist (ov (indent-guide--active-overlays))

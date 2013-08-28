@@ -38,4 +38,5 @@ You may also change the character for guides.
   + linum-mode
   + hl-line-mode
   + transient-mark-moe
+  + auto-complete-mode (popup.el)
   + commands in pager.el
