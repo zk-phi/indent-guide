@@ -113,20 +113,17 @@
 (defun indent-guide--current-column ()
   (save-excursion
     (back-to-indentation)
-    (cond ((not (eolp))
-           (current-column))
-          ((or (bobp) (eobp))
-           0)
-          (t
-           (let ((forward
-                  (save-excursion
-                    (forward-line -1)
-                    (indent-guide--current-column)))
-                 (backward
-                  (save-excursion
-                    (forward-line 1)
-                    (indent-guide--current-column))))
-             (max forward backward))))))
+    (if (not (eolp))
+        (current-column)
+      (let ((forward (save-excursion
+                       (if (zerop (forward-line 1))
+                           (indent-guide--current-column)
+                         0)))
+            (backward (save-excursion
+                        (if (zerop (forward-line -1))
+                            (indent-guide--current-column)
+                          0))))
+        (max forward backward)))))
 
 ;; * generate guides
 
