@@ -65,7 +65,7 @@
 
 ;;; Code:
 
-(defconst indent-guide-version "2.1.1")
+(defconst indent-guide-version "2.1.2")
 
 ;; * customs
 
@@ -115,11 +115,18 @@
     (back-to-indentation)
     (cond ((not (eolp))
            (current-column))
-          ((progn (forward-line -1)
-                  (bobp))
+          ((or (bobp) (eobp))
            0)
           (t
-           (indent-guide--current-column)))))
+           (let ((forward
+                  (save-excursion
+                    (forward-line -1)
+                    (indent-guide--current-column)))
+                 (backward
+                  (save-excursion
+                    (forward-line 1)
+                    (indent-guide--current-column))))
+             (max forward backward))))))
 
 ;; * generate guides
 
