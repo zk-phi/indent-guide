@@ -213,6 +213,14 @@
   (dolist (ov (indent-guide--active-overlays))
     (delete-overlay ov)))
 
+;; * workaround (FIXME)
+
+(defadvice indent-guide-show (around indent-guide--workaround activate)
+  (condition-case err
+      ad-do-it
+    (error (progn (message "an error occurred in indent-guide-show")
+                  (sit-for 1)))))
+
 ;; * provide
 
 (provide 'indent-guide)
