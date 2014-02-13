@@ -18,7 +18,7 @@
 
 ;; Author: zk_phi
 ;; URL: http://hins11.yu-yake.com/
-;; Version: 2.1.3
+;; Version: 2.1.4
 
 ;;; Commentary:
 
@@ -63,10 +63,12 @@
 ;; 2.1.1 work better with blank lines
 ;; 2.1.2 fixed bug in empty files
 ;; 2.1.3 better bob and eob handling
+;; 2.1.4 use "display" property instead of "before-string"
+;;       (now works better with hl-line and linum)
 
 ;;; Code:
 
-(defconst indent-guide-version "2.1.3")
+(defconst indent-guide-version "2.1.4")
 
 ;; * customs
 
@@ -176,9 +178,8 @@
                    ov     (and (not (= (point) original-pos))
                                (make-overlay (point) (1+ (point)))))))
       (when ov
-        (overlay-put ov 'invisible t)
         (overlay-put ov 'category 'indent-guide)
-        (overlay-put ov 'before-string
+        (overlay-put ov 'display
                      (propertize string 'face 'indent-guide-face))))))
 
 (defun indent-guide-show ()
