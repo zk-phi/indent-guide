@@ -148,7 +148,7 @@
 (defun indent-guide--make-overlay (line col)
   "draw line at (line, col)"
   (let ((original-pos (point))
-        diff string ov)
+        diff string ov prop)
     (save-excursion
       ;; try to goto (line, col)
       (goto-char (point-min))
@@ -160,26 +160,30 @@
       (cond ((eolp)                     ; blank line (with no or less indent)
              (setq string (concat (make-string (- diff) ?\s)
                                   indent-guide-char)
+                   prop   'before-string
                    ov     (and (not (= (point) original-pos))
                                (make-overlay (point) (point)))))
             ((not (zerop diff))         ; looking back tab
              (setq string (concat (make-string (- tab-width diff) ?\s)
                                   indent-guide-char
                                   (make-string (1- diff) ?\s))
+                   prop   'display
                    ov     (and (not (= (point) (1- original-pos)))
                                (make-overlay (point) (1- (point))))))
             ((looking-at "\t")          ; looking at tab
              (setq string (concat indent-guide-char
                                   (make-string (1- tab-width) ?\s))
+                   prop   'display
                    ov     (and (not (= (point) original-pos))
                                (make-overlay (point) (1+ (point))))))
             (t                          ; no problem
              (setq string indent-guide-char
+                   prop   'display
                    ov     (and (not (= (point) original-pos))
                                (make-overlay (point) (1+ (point)))))))
       (when ov
         (overlay-put ov 'category 'indent-guide)
-        (overlay-put ov 'display
+        (overlay-put ov prop
                      (propertize string 'face 'indent-guide-face))))))
 
 (defun indent-guide-show ()
