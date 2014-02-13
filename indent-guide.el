@@ -18,7 +18,7 @@
 
 ;; Author: zk_phi
 ;; URL: http://hins11.yu-yake.com/
-;; Version: 2.1.4
+;; Version: 2.1.5
 
 ;;; Commentary:
 
@@ -65,10 +65,11 @@
 ;; 2.1.3 better bob and eob handling
 ;; 2.1.4 use "display" property instead of "before-string"
 ;;       (now works better with hl-line and linum)
+;; 2.1.5 add "indent-guide-inhibit-modes"
 
 ;;; Code:
 
-(defconst indent-guide-version "2.1.4")
+(defconst indent-guide-version "2.1.5")
 
 ;; * customs
 
@@ -78,6 +79,10 @@
 
 (defcustom indent-guide-char "|"
   "character used as vertical line"
+  :group 'indent-guide)
+
+(defcustom indent-guide-inhibit-modes '(dired-mode)
+  "list of major-modes in which indent-guide should be turned off"
   :group 'indent-guide)
 
 ;; * minor-mode
@@ -96,7 +101,9 @@
 
 (define-globalized-minor-mode indent-guide-global-mode
   indent-guide-mode
-  (lambda () (indent-guide-mode 1)))
+  (lambda ()
+    (unless (memq major-mode indent-guide-inhibit-modes)
+      (indent-guide-mode 1))))
 
 ;; * variables / faces
 
