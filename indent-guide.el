@@ -114,41 +114,37 @@
 ;; * utilities
 
 (defun indent-guide--active-overlays ()
+  "Return the list of all overlays created by indent-guide."
   (delq nil
         (mapcar
          (lambda (ov)
            (and (eq (overlay-get ov 'category) 'indent-guide) ov))
          (overlays-in (point-min) (point-max)))))
 
-(defun indent-guide--beginning-of-level (&optional origin)
-  ;; origin <- indent column of current line
-  (unless origin
-    (back-to-indentation)
-    (if (not (eolp))
-        (setq origin (current-column))
-      (let ((forward (save-excursion
-                       (while (and (forward-line 1)
-                                   (not (eobp))
-                                   (progn (back-to-indentation) t)
-                                   (eolp)))
-                       (if (eobp) 0 (current-column))))
-            (backward (save-excursion
-                        (while (and (zerop (forward-line -1))
-                                    (progn (back-to-indentation) t)
-                                    (eolp)))
-                        (if (bobp) 0 (current-column)))))
-        (setq origin (max forward backward)))))
-  (cond ((zerop origin)
-         (point))
-        ((= (forward-line -1) -1)
-         nil)
-        ((progn
-           (back-to-indentation)
-           (and (not (eolp))
-                (< (current-column) origin)))
-         (point))
-        (t
-         (indent-guide--beginning-of-level origin))))
+(defun indent-guide--beginning-of-level ()
+  "Move to the beginning of current indentation level and returns
+the point."
+  (let ((base-level (if (progn (back-to-indentation)
+                               (not (eolp)))
+                        (current-column)
+                      (max (save-excursion
+                             (skip-chars-forward "\s\t\n")
+                             (back-to-indentation)
+                             (current-column))
+                           (save-excursion
+                             (skip-chars-backward "\s\t\n")
+                             (back-to-indentation)
+                             (current-column))))))
+    (if (zerop base-level)
+        (point)
+      (catch 'fail
+        (while (progn
+                 (when (= (forward-line -1) -1)
+                   (throw 'fail nil))
+                 (back-to-indentation)
+                 (or (eolp)
+                     (>= (current-column) base-level))))
+        (point)))))
 
 ;; * generate guides
 
@@ -202,6 +198,7 @@
       ;; decide line-col, line-start
       (save-excursion
         (if (not (indent-guide--beginning-of-level))
+            ;; we couldn't find the beginning of this level, so assume it 0
             (setq line-col 0
                   line-start 1)
           (setq line-col (current-column)
