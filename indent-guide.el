@@ -167,56 +167,52 @@ the point."
       (cond ((and (eolp) (<= 0 diff))   ; the line is too short
              ;; <-line-width->  <-diff->
              ;;               []        |
-             (unless (= (point) original-pos)
-               (if (setq ov (cl-some
-                             (lambda (ov)
-                               (when (eq (overlay-get ov 'category) 'indent-guide)
-                                 ov))
-                             (overlays-in (point) (point))))
-                   ;; we already have an overlay here => append to the existing overlay
-                   ;; (important when "recursive" is enabled)
-                   (setq string (let ((str (overlay-get ov 'before-string)))
-                                  (concat str
-                                          (make-string (- diff (length str)) ?\s)
-                                          indent-guide-char))
-                         prop   'before-string)
-                 (setq string (concat (make-string diff ?\s) indent-guide-char)
-                       prop   'before-string
-                       ov     (make-overlay (point) (point))))))
+             (if (setq ov (cl-some
+                           (lambda (ov)
+                             (when (eq (overlay-get ov 'category) 'indent-guide)
+                               ov))
+                           (overlays-in (point) (point))))
+                 ;; we already have an overlay here => append to the existing overlay
+                 ;; (important when "recursive" is enabled)
+                 (setq string (let ((str (overlay-get ov 'before-string)))
+                                (concat str
+                                        (make-string (- diff (length str)) ?\s)
+                                        indent-guide-char))
+                       prop   'before-string)
+               (setq string (concat (make-string diff ?\s) indent-guide-char)
+                     prop   'before-string
+                     ov     (make-overlay (point) (point)))))
             ((< diff 0)                 ; the column is inside a tab
              ;;  <---tab-width-->
              ;;      <-(- diff)->
              ;;     |            []
-             (unless (= (point) (1- original-pos))
-               (if (setq ov (cl-some
-                             (lambda (ov)
-                               (when (eq (overlay-get ov 'category) 'indent-guide)
-                                 ov))
-                             (overlays-in (1- (point)) (point))))
-                   ;; we already have an overlay here => modify the existing overlay
-                   ;; (important when "recursive" is enabled)
-                   (setq string (let ((str (overlay-get ov 'display)))
-                                  (aset str (+ 1 tab-width diff) ?|)
-                                  str)
-                         prop   'display)
-                 (setq string (concat (make-string (+ tab-width diff) ?\s)
-                                      indent-guide-char
-                                      (make-string (1- (- diff)) ?\s))
-                       prop   'display
-                       ov     (make-overlay (point) (1- (point)))))))
+             (if (setq ov (cl-some
+                           (lambda (ov)
+                             (when (eq (overlay-get ov 'category) 'indent-guide)
+                               ov))
+                           (overlays-in (1- (point)) (point))))
+                 ;; we already have an overlay here => modify the existing overlay
+                 ;; (important when "recursive" is enabled)
+                 (setq string (let ((str (overlay-get ov 'display)))
+                                (aset str (+ 1 tab-width diff) ?|)
+                                str)
+                       prop   'display)
+               (setq string (concat (make-string (+ tab-width diff) ?\s)
+                                    indent-guide-char
+                                    (make-string (1- (- diff)) ?\s))
+                     prop   'display
+                     ov     (make-overlay (point) (1- (point))))))
             ((looking-at "\t")          ; okay but looking at tab
              ;;    <-tab-width->
              ;; [|]
-             (unless (= (point) original-pos)
-               (setq string (concat indent-guide-char
-                                    (make-string (1- tab-width) ?\s))
-                     prop   'display
-                     ov     (make-overlay (point) (1+ (point))))))
+             (setq string (concat indent-guide-char
+                                  (make-string (1- tab-width) ?\s))
+                   prop   'display
+                   ov     (make-overlay (point) (1+ (point)))))
             (t                          ; no problem
-             (unless (= (point) original-pos)
-               (setq string indent-guide-char
-                     prop   'display
-                     ov     (make-overlay (point) (1+ (point)))))))
+             (setq string indent-guide-char
+                   prop   'display
+                   ov     (make-overlay (point) (1+ (point))))))
       (when ov
         (overlay-put ov 'category 'indent-guide)
         (overlay-put ov prop
@@ -252,7 +248,8 @@ the point."
         (setq line-end (line-number-at-pos)))
       ;; draw line
       (dotimes (tmp (- (1+ line-end) line-start))
-        (indent-guide--make-overlay (+ line-start tmp) line-col)))))
+        (indent-guide--make-overlay (+ line-start tmp) line-col))
+      (remove-overlays (point) (point) 'category 'indent-guide))))
 
 (defun indent-guide-remove ()
   (dolist (ov (indent-guide--active-overlays))
