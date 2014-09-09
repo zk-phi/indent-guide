@@ -1,6 +1,6 @@
 ;;; indent-guide.el --- show vertical lines to guide indentation
 
-;; Copyright (C) 2013 zk_phi
+;; Copyright (C) 2013-2014 zk_phi
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 
 ;; Author: zk_phi
 ;; URL: http://hins11.yu-yake.com/
-;; Version: 2.1.5
+;; Version: 2.1.6
 
 ;;; Commentary:
 
@@ -66,10 +66,11 @@
 ;; 2.1.4 use "display" property instead of "before-string"
 ;;       (now works better with hl-line and linum)
 ;; 2.1.5 add "indent-guide-inhibit-modes"
+;; 2.1.6 add option "indent-guide-recursive"
 
 ;;; Code:
 
-(defconst indent-guide-version "2.1.5")
+(defconst indent-guide-version "2.1.6")
 
 ;; * customs
 
@@ -83,6 +84,10 @@
 
 (defcustom indent-guide-inhibit-modes '(dired-mode)
   "list of major-modes in which indent-guide should be turned off"
+  :group 'indent-guide)
+
+(defcustom indent-guide-recursive nil
+  "when non-nil, draw multiple guide lines recursively."
   :group 'indent-guide)
 
 ;; * minor-mode
@@ -108,8 +113,7 @@
 ;; * variables / faces
 
 (make-face 'indent-guide-face)
-(set-face-attribute 'indent-guide-face nil
-                    :foreground "#535353")
+(set-face-attribute 'indent-guide-face nil :foreground "#535353")
 
 ;; * utilities
 
@@ -158,22 +162,51 @@ the point."
       (forward-line (1- line))
       (move-to-column col)
       ;; calculate difference from the actual col
-      (setq diff (- (current-column) col))
+      (setq diff (- col (current-column)))
       ;; make overlay or not
-      (cond ((eolp)                     ; blank line (with no or less indent)
-             (setq string (concat (make-string (- diff) ?\s)
-                                  indent-guide-char)
-                   prop   'before-string
-                   ov     (and (not (= (point) original-pos))
-                               (make-overlay (point) (point)))))
-            ((not (zerop diff))         ; looking back tab
-             (setq string (concat (make-string (- tab-width diff) ?\s)
-                                  indent-guide-char
-                                  (make-string (1- diff) ?\s))
-                   prop   'display
-                   ov     (and (not (= (point) (1- original-pos)))
-                               (make-overlay (point) (1- (point))))))
-            ((looking-at "\t")          ; looking at tab
+      (cond ((and (eolp) (<= 0 diff))   ; the line is too short
+             ;; <-line-width->  <-diff->
+             ;;               []        |
+             (if (setq ov (cl-some
+                           (lambda (ov)
+                             (when (eq (overlay-get ov 'category) 'indent-guide)
+                               ov))
+                           (overlays-in (point) (point))))
+                 ;; we already have an overlay here => append to the existing overlay
+                 ;; (important when "recursive" is enabled)
+                 (setq string (let ((str (overlay-get ov 'before-string)))
+                                (concat str
+                                        (make-string (- diff (length str)) ?\s)
+                                        indent-guide-char))
+                       prop   'before-string)
+               (setq string (concat (make-string diff ?\s) indent-guide-char)
+                     prop   'before-string
+                     ov     (and (not (= (point) original-pos))
+                                 (make-overlay (point) (point))))))
+            ((< diff 0)                 ; the column is inside a tab
+             ;;  <---tab-width-->
+             ;;      <-(- diff)->
+             ;;     |            []
+             (if (setq ov (cl-some
+                           (lambda (ov)
+                             (when (eq (overlay-get ov 'category) 'indent-guide)
+                               ov))
+                           (overlays-in (1- (point)) (point))))
+                 ;; we already have an overlay here => modify the existing overlay
+                 ;; (important when "recursive" is enabled)
+                 (setq string (let ((str (overlay-get ov 'display)))
+                                (aset str (+ 1 tab-width diff) ?|)
+                                str)
+                       prop   'display)
+               (setq string (concat (make-string (+ tab-width diff) ?\s)
+                                    indent-guide-char
+                                    (make-string (1- (- diff)) ?\s))
+                     prop   'display
+                     ov     (and (not (= (point) (1- original-pos)))
+                                 (make-overlay (point) (1- (point)))))))
+            ((looking-at "\t")          ; okay but looking at tab
+             ;;    <-tab-width->
+             ;; [|]
              (setq string (concat indent-guide-char
                                   (make-string (1- tab-width) ?\s))
                    prop   'display
@@ -190,10 +223,11 @@ the point."
                      (propertize string 'face 'indent-guide-face))))))
 
 (defun indent-guide-show ()
+  (interactive)
   (unless (or (indent-guide--active-overlays)
               (active-minibuffer-window))
     (let ((win-start (window-start))
-          (win-end (window-end))
+          (win-end (window-end nil t))
           line-col line-start line-end)
       ;; decide line-col, line-start
       (save-excursion
@@ -203,7 +237,9 @@ the point."
                   line-start 1)
           (setq line-col (current-column)
                 line-start (max (1+ (line-number-at-pos))
-                                (line-number-at-pos win-start)))))
+                                (line-number-at-pos win-start))))
+        (when (and indent-guide-recursive (> line-col 0))
+          (indent-guide-show)))
       ;; decide line-end
       (save-excursion
         (while (and (progn (back-to-indentation)
