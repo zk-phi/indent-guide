@@ -8,6 +8,8 @@ show vertical lines to guide indentation
 
 [[screencast.gif]]
 
+[[screencast2.gif]]
+
 ** Usage
 
 Require this script
