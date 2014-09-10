@@ -90,31 +90,17 @@
   "when non-nil, draw multiple guide lines recursively."
   :group 'indent-guide)
 
-;; * minor-mode
-
-(define-minor-mode indent-guide-mode
-  "show vertical lines to guide indentation"
-  :init-value nil
-  :lighter " ing"
-  :global nil
-  (if indent-guide-mode
-      (progn
-        (add-hook 'pre-command-hook 'indent-guide-remove nil t)
-        (add-hook 'post-command-hook 'indent-guide-show nil t))
-    (remove-hook 'pre-command-hook 'indent-guide-remove t)
-    (remove-hook 'post-command-hook 'indent-guide-show t)))
-
-(define-globalized-minor-mode indent-guide-global-mode
-  indent-guide-mode
-  (lambda ()
-    (unless (memq major-mode indent-guide-inhibit-modes)
-      (indent-guide-mode 1))))
-
-;; * variables / faces
+(defcustom indent-guide-delay nil
+  "When a positive number, rendering guide lines is delayed DELAY
+  seconds.")
 
 (defface indent-guide-face '((t (:foreground "#535353")))
   "Face used to indent guide lines."
   :group 'indent-guide)
+
+;; * variables
+
+(defvar indent-guide--timer-object nil)
 
 ;; * utilities
 
@@ -255,6 +241,39 @@ the point."
 (defun indent-guide-remove ()
   (dolist (ov (indent-guide--active-overlays))
     (delete-overlay ov)))
+
+;; * minor-mode
+
+(defun indent-guide-post-command-hook ()
+  (if (null indent-guide-delay)
+      (indent-guide-show)
+    (when (null indent-guide--timer-object)
+      (setq indent-guide--timer-object
+            (run-with-idle-timer indent-guide-delay nil
+                                 (lambda ()
+                                   (indent-guide-show)
+                                   (setq indent-guide--timer-object nil)))))))
+
+(defun indent-guide-pre-command-hook ()
+  (indent-guide-remove))
+
+(define-minor-mode indent-guide-mode
+  "show vertical lines to guide indentation"
+  :init-value nil
+  :lighter " ing"
+  :global nil
+  (if indent-guide-mode
+      (progn
+        (add-hook 'pre-command-hook 'indent-guide-pre-command-hook nil t)
+        (add-hook 'post-command-hook 'indent-guide-post-command-hook nil t))
+    (remove-hook 'pre-command-hook 'indent-guide-pre-command-hook t)
+    (remove-hook 'post-command-hook 'indent-guide-post-command-hook t)))
+
+(define-globalized-minor-mode indent-guide-global-mode
+  indent-guide-mode
+  (lambda ()
+    (unless (memq major-mode indent-guide-inhibit-modes)
+      (indent-guide-mode 1))))
 
 ;; * provide
 
