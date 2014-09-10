@@ -39,6 +39,11 @@ can set delay.
 
 : (setq indent-guide-delay 0.1)
 
+To show not only one guide line but all guide lines recursively, set
+"indent-guide-recursive" non-nil.
+
+: (setq indent-guide-recursive t)
+
 You may also change the character for guides.
 
 : (setq indent-guide-char ":")
@@ -46,6 +51,5 @@ You may also change the character for guides.
 ** Known Limitations
 
 - does not work perfectly with following modes (commands) :
-  + transient-mark-moe
-  + auto-complete-mode (popup.el)
+  + company-mode, auto-complete-mode, popup.el (tooltip is sometimes not rendered perfectly)
   + commands in pager.el
