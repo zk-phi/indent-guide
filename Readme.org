@@ -6,7 +6,11 @@ show vertical lines to guide indentation
 
 ** Screencast
 
+Current block only
+
 [[screencast.gif]]
+
+All blocks
 
 [[screencast2.gif]]
 
