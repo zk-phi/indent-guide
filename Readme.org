@@ -50,6 +50,9 @@ You may also change the character for guides.
 
 ** Known Limitations
 
-- does not work perfectly with following modes (commands) :
-  + company-mode, auto-complete-mode, popup.el (tooltip is sometimes not rendered perfectly)
-  + commands in pager.el
+does not work perfectly with following modes (commands) :
+
++ company-mode, auto-complete-mode, popup.el (tooltip is sometimes not rendered perfectly)
++ commands in pager.el
+
+contributions are welcome !
