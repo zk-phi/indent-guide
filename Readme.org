@@ -34,6 +34,11 @@ configure this face to make liens more pretty in your colorscheme.
 
 : (set-face-background 'indent-guide-face "dimgray")
 
+If you want indent-guide to show guide lines only in idle-time, you
+can set delay.
+
+: (setq indent-guide-delay 0.1)
+
 You may also change the character for guides.
 
 : (setq indent-guide-char ":")
