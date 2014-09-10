@@ -113,7 +113,7 @@
 ;; * variables / faces
 
 (defface indent-guide-face '((t (:foreground "#535353")))
-  "Face used to indnet guide lines."
+  "Face used to indent guide lines."
   :group 'indent-guide)
 
 ;; * utilities
