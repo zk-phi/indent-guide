@@ -112,8 +112,8 @@
 
 ;; * variables / faces
 
-(make-face 'indent-guide-face)
-(set-face-attribute 'indent-guide-face nil :foreground "#535353")
+(defface indent-guide-face '((t (:foreground "#535353")))
+  "Face used to indnet guide lines.")
 
 ;; * utilities
 
