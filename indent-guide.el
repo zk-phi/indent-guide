@@ -80,19 +80,24 @@
 
 (defcustom indent-guide-char "|"
   "character used as vertical line"
+  :type 'string
   :group 'indent-guide)
 
 (defcustom indent-guide-inhibit-modes '(dired-mode)
   "list of major-modes in which indent-guide should be turned off"
+  :type '(repeat symbol)
   :group 'indent-guide)
 
 (defcustom indent-guide-recursive nil
   "when non-nil, draw multiple guide lines recursively."
+  :type 'boolean
   :group 'indent-guide)
 
 (defcustom indent-guide-delay nil
   "When a positive number, rendering guide lines is delayed DELAY
-  seconds.")
+  seconds."
+  :type 'number
+  :group 'indent-guide)
 
 (defface indent-guide-face '((t (:foreground "#535353")))
   "Face used to indent guide lines."
