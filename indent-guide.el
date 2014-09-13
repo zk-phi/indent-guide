@@ -257,6 +257,7 @@ the point."
 (defun indent-guide-pre-command-hook ()
   (indent-guide-remove))
 
+;;;###autoload
 (define-minor-mode indent-guide-mode
   "show vertical lines to guide indentation"
   :init-value nil
@@ -269,6 +270,7 @@ the point."
     (remove-hook 'pre-command-hook 'indent-guide-pre-command-hook t)
     (remove-hook 'post-command-hook 'indent-guide-post-command-hook t)))
 
+;;;###autoload
 (define-globalized-minor-mode indent-guide-global-mode
   indent-guide-mode
   (lambda ()
