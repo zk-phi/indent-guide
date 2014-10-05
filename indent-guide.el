@@ -260,7 +260,10 @@ the point."
                                    (setq indent-guide--timer-object nil)))))))
 
 (defun indent-guide-pre-command-hook ()
-  (indent-guide-remove))
+  (indent-guide-remove)
+  (when (timerp indent-guide--timer-object)
+    (cancel-timer indent-guide--timer-object)
+    (setq indent-guide--timer-object nil)))
 
 ;;;###autoload
 (define-minor-mode indent-guide-mode
