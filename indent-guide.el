@@ -211,8 +211,9 @@ point."
                      (propertize string 'face 'indent-guide-face))))))
 
 (defun indent-guide-show ()
-  (unless (or (indent-guide--active-overlays)
-              (active-minibuffer-window))
+  (when (and indent-guide-mode          ;in *this* buffer, at *this* time?
+             (not (indent-guide--active-overlays))
+             (not (active-minibuffer-window)))
     (let ((win-start (window-start))
           (win-end (window-end nil t))
           line-col line-start line-end)
@@ -248,22 +249,6 @@ point."
 
 ;; * minor-mode
 
-(defun indent-guide-post-command-hook ()
-  (if (null indent-guide-delay)
-      (indent-guide-show)
-    (when (null indent-guide--timer-object)
-      (setq indent-guide--timer-object
-            (run-with-idle-timer indent-guide-delay nil
-                                 (lambda ()
-                                   (indent-guide-show)
-                                   (setq indent-guide--timer-object nil)))))))
-
-(defun indent-guide-pre-command-hook ()
-  (indent-guide-remove)
-  (when (timerp indent-guide--timer-object)
-    (cancel-timer indent-guide--timer-object)
-    (setq indent-guide--timer-object nil)))
-
 ;;;###autoload
 (define-minor-mode indent-guide-mode
   "Show vertical lines to guide indentation."
@@ -272,10 +257,16 @@ point."
   :global nil
   (if indent-guide-mode
       (progn
-        (add-hook 'pre-command-hook 'indent-guide-pre-command-hook nil t)
-        (add-hook 'post-command-hook 'indent-guide-post-command-hook nil t))
-    (remove-hook 'pre-command-hook 'indent-guide-pre-command-hook t)
-    (remove-hook 'post-command-hook 'indent-guide-post-command-hook t)))
+        (unless indent-guide--timer-object
+          (setq indent-guide--timer-object
+                (run-with-idle-timer indent-guide-delay :repeat
+                                     'indent-guide-show)))
+        (add-hook 'pre-command-hook 'indent-guide-remove nil t))
+    (remove-hook 'pre-command-hook 'indent-guide-remove t)
+    (indent-guide-remove)
+    (when (timerp indent-guide--timer-object)
+      (cancel-timer indent-guide--timer-object)
+      (setq indent-guide--timer-object nil))))
 
 ;;;###autoload
 (define-globalized-minor-mode indent-guide-global-mode
