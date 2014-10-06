@@ -118,8 +118,8 @@
          (overlays-in (point-min) (point-max)))))
 
 (defun indent-guide--beginning-of-level ()
-  "Move to the beginning of current indentation level and returns
-the point."
+  "Move to the beginning of current indentation level and return
+point."
   (let ((base-level (if (progn (back-to-indentation)
                                (not (eolp)))
                         (current-column)
@@ -145,7 +145,7 @@ the point."
 ;; * generate guides
 
 (defun indent-guide--make-overlay (line col)
-  "draw line at (line, col)"
+  "Draw line at (line, col)."
   (let ((original-pos (point))
         diff string ov prop)
     (save-excursion
@@ -211,7 +211,6 @@ the point."
                      (propertize string 'face 'indent-guide-face))))))
 
 (defun indent-guide-show ()
-  (interactive)
   (unless (or (indent-guide--active-overlays)
               (active-minibuffer-window))
     (let ((win-start (window-start))
@@ -267,7 +266,7 @@ the point."
 
 ;;;###autoload
 (define-minor-mode indent-guide-mode
-  "show vertical lines to guide indentation"
+  "Show vertical lines to guide indentation."
   :init-value nil
   :lighter " ing"
   :global nil
