@@ -93,7 +93,7 @@
   :type 'boolean
   :group 'indent-guide)
 
-(defcustom indent-guide-delay nil
+(defcustom indent-guide-delay 0.5
   "When a positive number, rendering guide lines is delayed DELAY
   seconds."
   :type 'number
