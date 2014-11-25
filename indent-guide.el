@@ -70,10 +70,9 @@
 
 ;;; Code:
 
-(defconst indent-guide-version "2.1.6")
+(require 'cl-lib)
 
-(eval-when-compile
-  (require 'cl-lib))
+(defconst indent-guide-version "2.1.6")
 
 ;; * customs
 
