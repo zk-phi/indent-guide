@@ -72,6 +72,9 @@
 
 (defconst indent-guide-version "2.1.6")
 
+(eval-when-compile
+  (require 'cl-lib))
+
 ;; * customs
 
 (defgroup indent-guide nil
@@ -279,7 +282,7 @@ the point."
 (define-globalized-minor-mode indent-guide-global-mode
   indent-guide-mode
   (lambda ()
-    (unless (memq major-mode indent-guide-inhibit-modes)
+    (unless (cl-some 'derived-mode-p indent-guide-inhibit-modes)
       (indent-guide-mode 1))))
 
 ;; * provide
