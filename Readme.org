@@ -48,6 +48,13 @@ You may also change the character for guides.
 
 : (setq indent-guide-char ":")
 
+If you find the indentation guide too distracting to display for the
+normal case, the leftmost column, you can choose to only show
+indentation guides beyond a certain column.
+
+: ;; (0 is the leftmost column)
+: (setq indent-guide-show-beyond-column 0)
+
 ** Comparison with highlight-indentation
 
 - look and feel

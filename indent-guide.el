@@ -90,6 +90,15 @@
   :type '(repeat symbol)
   :group 'indent-guide)
 
+(defcustom indent-guide-show-beyond-column nil
+  "When set, only show a guide for columns beyond this
+number (column 0 is the leftmost one).
+
+E.g. set to 0 to prevent an indent guide in the leftmost
+column. nil shows an indent guide for all columns."
+  :type 'number
+  :group 'indent-guide)
+
 (defcustom indent-guide-recursive nil
   "When non-nil, draw multiple guide lines recursively."
   :type 'boolean
@@ -212,6 +221,14 @@ the point."
         (overlay-put ov prop
                      (propertize string 'face 'indent-guide-face))))))
 
+(defun indent-guide--show-column? (col)
+  "Whether an indent-guide should be shown for LINE-COL or not.
+
+If indent-guide-show-beyond-column is set, only show if beoynd
+that column."
+  (or (not indent-guide-show-beyond-column)
+      (> col indent-guide-show-beyond-column)))
+
 (defun indent-guide-show ()
   (interactive)
   (unless (or (indent-guide--active-overlays)
@@ -230,20 +247,24 @@ the point."
                                 (line-number-at-pos win-start))))
         (when (and indent-guide-recursive (> line-col 0))
           (indent-guide-show)))
-      ;; decide line-end
-      (save-excursion
-        (while (and (progn (back-to-indentation)
-                           (or (< line-col (current-column)) (eolp)))
-                    (forward-line 1)
-                    (not (eobp))
-                    (<= (point) win-end)))
-        (if (>= line-col (current-column))
-            (forward-line -1))
-        (setq line-end (line-number-at-pos)))
-      ;; draw line
-      (dotimes (tmp (- (1+ line-end) line-start))
-        (indent-guide--make-overlay (+ line-start tmp) line-col))
-      (remove-overlays (point) (point) 'category 'indent-guide))))
+
+      (when (indent-guide--show-column? line-col)
+
+        ;; decide line-end
+        (save-excursion
+          (while (and (progn (back-to-indentation)
+                             (or (< line-col (current-column)) (eolp)))
+                      (forward-line 1)
+                      (not (eobp))
+                      (<= (point) win-end)))
+          (if (>= line-col (current-column))
+              (forward-line -1))
+          (setq line-end (line-number-at-pos)))
+        ;; draw line
+        (dotimes (tmp (- (1+ line-end) line-start))
+          (indent-guide--make-overlay (+ line-start tmp) line-col))
+
+        (remove-overlays (point) (point) 'category 'indent-guide)))))
 
 (defun indent-guide-remove ()
   (dolist (ov (indent-guide--active-overlays))
