@@ -1,6 +1,6 @@
 ;;; indent-guide.el --- show vertical lines to guide indentation
 
-;; Copyright (C) 2013-2014 zk_phi
+;; Copyright (C) 2013-2015 zk_phi
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 
 ;; Author: zk_phi
 ;; URL: http://hins11.yu-yake.com/
-;; Version: 2.1.6
+;; Version: 2.2.0
 
 ;;; Commentary:
 
@@ -67,12 +67,13 @@
 ;;       (now works better with hl-line and linum)
 ;; 2.1.5 add "indent-guide-inhibit-modes"
 ;; 2.1.6 add option "indent-guide-recursive"
+;; 2.2.0 add option "indent-guide-threshold"
 
 ;;; Code:
 
 (require 'cl-lib)
 
-(defconst indent-guide-version "2.1.6")
+(defconst indent-guide-version "2.2.0")
 
 ;; * customs
 
@@ -98,6 +99,12 @@
 (defcustom indent-guide-delay nil
   "When a positive number, rendering guide lines is delayed DELAY
   seconds."
+  :type 'number
+  :group 'indent-guide)
+
+(defcustom indent-guide-threshold -1
+  "Guide lines are drawn only when the column number is over this
+  value."
   :type 'number
   :group 'indent-guide)
 
@@ -228,22 +235,25 @@ the point."
           (setq line-col (current-column)
                 line-start (max (1+ (line-number-at-pos))
                                 (line-number-at-pos win-start))))
+        ;; if recursive draw is enabled and (line-col > 0), recurse
+        ;; into lower level.
         (when (and indent-guide-recursive (> line-col 0))
           (indent-guide-show)))
-      ;; decide line-end
-      (save-excursion
-        (while (and (progn (back-to-indentation)
-                           (or (< line-col (current-column)) (eolp)))
-                    (forward-line 1)
-                    (not (eobp))
-                    (<= (point) win-end)))
-        (if (>= line-col (current-column))
-            (forward-line -1))
-        (setq line-end (line-number-at-pos)))
-      ;; draw line
-      (dotimes (tmp (- (1+ line-end) line-start))
-        (indent-guide--make-overlay (+ line-start tmp) line-col))
-      (remove-overlays (point) (point) 'category 'indent-guide))))
+      (when (> line-col indent-guide-threshold)
+        ;; decide line-end
+        (save-excursion
+          (while (and (progn (back-to-indentation)
+                             (or (< line-col (current-column)) (eolp)))
+                      (forward-line 1)
+                      (not (eobp))
+                      (<= (point) win-end)))
+          (if (>= line-col (current-column))
+              (forward-line -1))
+          (setq line-end (line-number-at-pos)))
+        ;; draw line
+        (dotimes (tmp (- (1+ line-end) line-start))
+          (indent-guide--make-overlay (+ line-start tmp) line-col))
+        (remove-overlays (point) (point) 'category 'indent-guide)))))
 
 (defun indent-guide-remove ()
   (dolist (ov (indent-guide--active-overlays))
