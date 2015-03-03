@@ -97,7 +97,7 @@
   :type 'boolean
   :group 'indent-guide)
 
-(defcustom indent-guide-delay nil
+(defcustom indent-guide-delay 0.5
   "When a positive number, rendering guide lines is delayed DELAY
   seconds."
   :type 'number
@@ -128,8 +128,8 @@
          (overlays-in (point-min) (point-max)))))
 
 (defun indent-guide--beginning-of-level ()
-  "Move to the beginning of current indentation level and returns
-the point."
+  "Move to the beginning of current indentation level and return
+point."
   (let ((base-level (if (progn (back-to-indentation)
                                (not (eolp)))
                         (current-column)
@@ -155,7 +155,7 @@ the point."
 ;; * generate guides
 
 (defun indent-guide--make-overlay (line col)
-  "draw line at (line, col)"
+  "Draw line at (line, col)."
   (let ((original-pos (point))
         diff string ov prop)
     (save-excursion
@@ -221,9 +221,9 @@ the point."
                      (propertize string 'face 'indent-guide-face))))))
 
 (defun indent-guide-show ()
-  (interactive)
-  (unless (or (indent-guide--active-overlays)
-              (active-minibuffer-window))
+  (when (and indent-guide-mode          ;in *this* buffer, at *this* time?
+             (not (indent-guide--active-overlays))
+             (not (active-minibuffer-window)))
     (let ((win-start (window-start))
           (win-end (window-end nil t))
           line-col line-start line-end)
@@ -262,31 +262,24 @@ the point."
 
 ;; * minor-mode
 
-(defun indent-guide-post-command-hook ()
-  (if (null indent-guide-delay)
-      (indent-guide-show)
-    (when (null indent-guide--timer-object)
-      (setq indent-guide--timer-object
-            (run-with-idle-timer indent-guide-delay nil
-                                 (lambda ()
-                                   (indent-guide-show)
-                                   (setq indent-guide--timer-object nil)))))))
-
-(defun indent-guide-pre-command-hook ()
-  (indent-guide-remove))
-
 ;;;###autoload
 (define-minor-mode indent-guide-mode
-  "show vertical lines to guide indentation"
+  "Show vertical lines to guide indentation."
   :init-value nil
   :lighter " ing"
   :global nil
   (if indent-guide-mode
       (progn
-        (add-hook 'pre-command-hook 'indent-guide-pre-command-hook nil t)
-        (add-hook 'post-command-hook 'indent-guide-post-command-hook nil t))
-    (remove-hook 'pre-command-hook 'indent-guide-pre-command-hook t)
-    (remove-hook 'post-command-hook 'indent-guide-post-command-hook t)))
+        (unless indent-guide--timer-object
+          (setq indent-guide--timer-object
+                (run-with-idle-timer indent-guide-delay :repeat
+                                     'indent-guide-show)))
+        (add-hook 'pre-command-hook 'indent-guide-remove nil t))
+    (remove-hook 'pre-command-hook 'indent-guide-remove t)
+    (indent-guide-remove)
+    (when (timerp indent-guide--timer-object)
+      (cancel-timer indent-guide--timer-object)
+      (setq indent-guide--timer-object nil))))
 
 ;;;###autoload
 (define-globalized-minor-mode indent-guide-global-mode
