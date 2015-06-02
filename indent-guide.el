@@ -87,7 +87,11 @@
   :group 'indent-guide)
 
 (defcustom indent-guide-inhibit-modes
-  '(tabulated-list-mode special-mode dired-mode eww-mode)
+  '(tabulated-list-mode
+    special-mode
+    dired-mode
+    eww-mode
+    eshell-mode)
   "List of major-modes in which indent-guide should be turned off."
   :type '(repeat symbol)
   :group 'indent-guide)
