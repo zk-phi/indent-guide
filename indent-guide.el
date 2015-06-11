@@ -18,7 +18,7 @@
 
 ;; Author: zk_phi
 ;; URL: http://hins11.yu-yake.com/
-;; Version: 2.2.0
+;; Version: 2.3.0
 
 ;;; Commentary:
 
@@ -68,12 +68,13 @@
 ;; 2.1.5 add "indent-guide-inhibit-modes"
 ;; 2.1.6 add option "indent-guide-recursive"
 ;; 2.2.0 add option "indent-guide-threshold"
+;; 2.3.0 use regexp search to find the beginning of level
 
 ;;; Code:
 
 (require 'cl-lib)
 
-(defconst indent-guide-version "2.2.0")
+(defconst indent-guide-version "2.3.0")
 
 ;; * customs
 
@@ -131,30 +132,40 @@
            (and (eq (overlay-get ov 'category) 'indent-guide) ov))
          (overlays-in (point-min) (point-max)))))
 
+(defun indent-guide--indentation-candidates (level)
+  "*Internal function for `indent-guide--beginning-of-level'."
+  (cond ((<= level 0)
+         (list ""))
+        ((>= level tab-width)
+         (cons (concat "\t" (make-string (- level tab-width) ?\s))
+               (cons (make-string level ?\s)
+                     (indent-guide--indentation-candidates (1- level)))))
+        (t
+         (cons (make-string level ?\s)
+               (indent-guide--indentation-candidates (1- level))))))
+
 (defun indent-guide--beginning-of-level ()
-  "Move to the beginning of current indentation level and returns
+  "Move to the beginning of current indentation level and return
 the point."
-  (let ((base-level (if (progn (back-to-indentation)
-                               (not (eolp)))
-                        (current-column)
-                      (max (save-excursion
-                             (skip-chars-forward "\s\t\n")
-                             (back-to-indentation)
-                             (current-column))
-                           (save-excursion
-                             (skip-chars-backward "\s\t\n")
-                             (back-to-indentation)
-                             (current-column))))))
+  (back-to-indentation)
+  (let* ((base-level (if (not (eolp))
+                         (current-column)
+                       (max (save-excursion
+                              (skip-chars-forward "\s\t\n")
+                              (back-to-indentation)
+                              (current-column))
+                            (progn
+                              (skip-chars-backward "\s\t\n")
+                              (back-to-indentation)
+                              (current-column)))))
+         (candidates (indent-guide--indentation-candidates (1- base-level)))
+         (regex (concat "^" (regexp-opt candidates t) "[^\s\t\n]")))
     (if (zerop base-level)
         (point)
-      (catch 'fail
-        (while (progn
-                 (when (= (forward-line -1) -1)
-                   (throw 'fail nil))
-                 (back-to-indentation)
-                 (or (eolp)
-                     (>= (current-column) base-level))))
-        (point)))))
+      (beginning-of-line)
+      (or (and (search-backward-regexp regex nil t)
+               (goto-char (match-end 1)))
+          (goto-char (point-min))))))
 
 ;; * generate guides
 
@@ -233,13 +244,10 @@ the point."
           line-col line-start line-end)
       ;; decide line-col, line-start
       (save-excursion
-        (if (not (indent-guide--beginning-of-level))
-            ;; we couldn't find the beginning of this level, so assume it 0
-            (setq line-col 0
-                  line-start 1)
-          (setq line-col (current-column)
-                line-start (max (1+ (line-number-at-pos))
-                                (line-number-at-pos win-start))))
+        (indent-guide--beginning-of-level)
+        (setq line-col (current-column)
+              line-start (max (1+ (line-number-at-pos))
+                              (line-number-at-pos win-start)))
         ;; if recursive draw is enabled and (line-col > 0), recurse
         ;; into lower level.
         (when (and indent-guide-recursive (> line-col 0))
