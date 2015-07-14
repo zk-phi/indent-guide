@@ -154,7 +154,7 @@ the point."
                               (skip-chars-forward "\s\t\n")
                               (back-to-indentation)
                               (current-column))
-                            (progn
+                            (save-excursion
                               (skip-chars-backward "\s\t\n")
                               (back-to-indentation)
                               (current-column)))))
@@ -226,7 +226,7 @@ the point."
                                   (make-string (1- tab-width) ?\s))
                    prop   'display
                    ov     (make-overlay (point) (1+ (point)))))
-            (t                          ; no problem
+            (t                          ; okay and looking at a space
              (setq string indent-guide-char
                    prop   'display
                    ov     (make-overlay (point) (1+ (point))))))
