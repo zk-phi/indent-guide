@@ -202,7 +202,7 @@ the point."
                    'xpm t :ascent 'center))
              (str (let ((s (make-string length ?\s)))
                     (aset s position ?\|)
-                    (propertize s 'face `((t (:foreground ,indent-guide-line-color)))))))
+                    (propertize s 'face `(:foreground ,indent-guide-line-color)))))
         (push (setq cached (cons (cons length position) (cons str img)))
               indent-guide--image-cache)))
     (let ((img (cdr (cdr cached))) (str (car (cdr cached))))
