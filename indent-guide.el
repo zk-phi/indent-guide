@@ -248,7 +248,8 @@ the point."
               (active-minibuffer-window))
     (let ((win-start (window-start))
           (win-end (window-end nil t))
-          line-col line-start line-end)
+          line-col line-start line-end
+          last-col)
       ;; decide line-col, line-start
       (save-excursion
         (indent-guide--beginning-of-level)
@@ -263,8 +264,10 @@ the point."
                       (forward-line 1)
                       (not (eobp))
                       (<= (point) win-end)))
-          (if (>= line-col (current-column))
-              (forward-line -1))
+          (when (>= line-col (setq last-col (current-column)))
+            (forward-line -1)
+            (when (zerop last-col)
+              (forward-line -1)))
           (setq line-end (line-number-at-pos)))
         ;; draw line
         (dotimes (tmp (- (1+ line-end) line-start))
