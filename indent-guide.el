@@ -106,7 +106,7 @@
   :type 'string
   :group 'indent-guide)
 
-(defcustom indent-guide-line-left-margin 3
+(defcustom indent-guide-line-left-margin (/ (frame-char-width) 2)
   "Left margin of the guide lines."
   :type 'number
   :group 'indent-guide)
