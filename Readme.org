@@ -29,21 +29,21 @@ indent-guide-global-mode.
 
 ** Configuration
 
-- Line color
-
-: (setq indent-guide-color "#ffffff")
-
 - Idle delay
 
 : (setq indent-guide-delay 0.1)
 
+- Line color
+
+: (setq indent-guide-line-color "#ffffff")
+
 - Dashed/Solid line
 
-: (setq indent-guide-dash-length 3)
+: (setq indent-guide-line-dash-length 3)
 
 - Horizontal offset
 
-: (setq indent-guide-left-margin 0)
+: (setq indent-guide-line-left-margin 0)
 
 - Line height (useful on some platforms that indent-guide breaks the line-height)
 

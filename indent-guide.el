@@ -106,7 +106,7 @@
   :type 'string
   :group 'indent-guide)
 
-(defcustom indent-guide-left-margin 3
+(defcustom indent-guide-line-left-margin 3
   "Left margin of the guide lines."
   :type 'number
   :group 'indent-guide)
@@ -116,7 +116,7 @@
   :type 'number
   :group 'indent-guide)
 
-(defcustom indent-guide-dash-length indent-guide-line-height
+(defcustom indent-guide-line-dash-length indent-guide-line-height
   "Dash length of the guide lines."
   :type 'number
   :group 'indent-guide)
@@ -177,7 +177,7 @@ the point."
     (unless cached
       (let* ((fcw (frame-char-width))
              (width (* length fcw))
-             (posn (+ (* position fcw) indent-guide-left-margin))
+             (posn (+ (* position fcw) indent-guide-line-left-margin))
              (img (create-image
                    (with-temp-buffer
                      (insert "/* XPM */ static char * x[] = {"
@@ -185,7 +185,7 @@ the point."
                              (format ",\". c %s\"" indent-guide-color)
                              ",\"  c None\"")
                      (dotimes (i indent-guide-line-height)
-                       (insert (if (zerop (mod (1+ i) (1+ indent-guide-dash-length)))
+                       (insert (if (zerop (mod (1+ i) (1+ indent-guide-line-dash-length)))
                                    (concat ",\"" (make-string width ?\s) "\"")
                                  (concat ",\"" (make-string posn ?\s) "."
                                          (make-string (- width posn 1) ?\s) "\""))))
@@ -206,8 +206,7 @@ the point."
 
 (defun indent-guide--make-overlay (line col)
   "draw line at (line, col)"
-  (let ((original-pos (point))
-        diff string ov prop)
+  (let (diff string ov prop)
     (save-excursion
       ;; try to goto (line, col)
       (goto-char (point-min))
