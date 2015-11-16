@@ -1,4 +1,4 @@
-* indent-guide.el
+* indent-guide.el (XPM version)
 
 インデントを縦線で表示
 
@@ -6,11 +6,11 @@ show vertical lines to guide indentation
 
 ** Screencast
 
-Current block only
+solid
 
 [[screencast.gif]]
 
-All blocks
+dashed
 
 [[screencast2.gif]]
 
@@ -29,48 +29,30 @@ indent-guide-global-mode.
 
 ** Configuration
 
-Column lines are propertized with "indent-guide-face". So you may
-configure this face to make liens more pretty in your colorscheme.
+- Line color
 
-: (set-face-background 'indent-guide-face "dimgray")
+: (setq indent-guide-color "#ffffff")
 
-If you want indent-guide to show guide lines only in idle-time, you
-can set delay.
+- Idle delay
 
 : (setq indent-guide-delay 0.1)
 
-To show not only one guide line but all guide lines recursively, set
-"indent-guide-recursive" non-nil.
+- Dashed/Solid line
 
-: (setq indent-guide-recursive t)
+: (setq indent-guide-dash-length 3)
 
-You may also change the character for guides.
+- Horizontal offset
 
-: (setq indent-guide-char ":")
+: (setq indent-guide-left-margin 0)
 
-** Comparison with highlight-indentation
+- Line height (useful on some platforms that indent-guide breaks the line-height)
 
-- look and feel
+: (setq indent-guide-line-height (1- (frame-char-height)))
 
-- better indentation handling for LISP-like languages
+** Comparison with ASCII version
 
-  : (foo                  (foo
-  : |(foobar baz          |(foobar baz
-  : ||       (foobar      |   |   |(foobar
-  : ||       |(qux))))    |   |   | (qux))))
-  :
-  :    indent-guide     highlight-indentation
+- looks better
 
-- indent-guide works fine even when the code is indented with TABs
+- =indent-guide-recursive= option is removed
 
-- indent-guide is slower than highlight-indentation especially in
-  very large blocks
-
-** Known Limitations
-
-does not work perfectly with following modes (commands) :
-
-+ company-mode, auto-complete-mode, popup.el (tooltip is sometimes not rendered perfectly)
-+ commands in pager.el
-
-contributions are welcome !
+- doesn't work on terminals

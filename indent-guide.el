@@ -18,7 +18,7 @@
 
 ;; Author: zk_phi
 ;; URL: http://hins11.yu-yake.com/
-;; Version: 2.3.0
+;; Version: 2.3.0-XPM
 
 ;;; Commentary:
 
@@ -33,14 +33,10 @@
 ;;
 ;;   (indent-guide-global-mode)
 
-;; Column lines are propertized with "indent-guide-face". So you may
+;; Column lines are propertized with "indent-guide-color". So you may
 ;; configure this face to make guides more pretty in your colorscheme.
 ;;
-;;   (set-face-background 'indent-guide-face "dimgray")
-;;
-;; You may also change the character for guides.
-;;
-;;   (setq indent-guide-char ":")
+;;   (setq indent-guide-color "dimgray")
 
 ;;; Change Log:
 
@@ -69,23 +65,19 @@
 ;; 2.1.6 add option "indent-guide-recursive"
 ;; 2.2.0 add option "indent-guide-threshold"
 ;; 2.3.0 use regexp search to find the beginning of level
+;; 2.3.0-XPM removed troublesome options and add XPM support
 
 ;;; Code:
 
 (require 'cl-lib)
 
-(defconst indent-guide-version "2.3.0")
+(defconst indent-guide-version "2.3.0-XPM")
 
 ;; * customs
 
 (defgroup indent-guide nil
   "Show vertical lines to guide indentation."
   :group 'emacs)
-
-(defcustom indent-guide-char "|"
-  "Character used as vertical line."
-  :type 'string
-  :group 'indent-guide)
 
 (defcustom indent-guide-inhibit-modes
   '(tabulated-list-mode
@@ -95,11 +87,6 @@
     eshell-mode)
   "List of major-modes in which indent-guide should be turned off."
   :type '(repeat symbol)
-  :group 'indent-guide)
-
-(defcustom indent-guide-recursive nil
-  "When non-nil, draw multiple guide lines recursively."
-  :type 'boolean
   :group 'indent-guide)
 
 (defcustom indent-guide-delay nil
@@ -114,8 +101,24 @@
   :type 'number
   :group 'indent-guide)
 
-(defface indent-guide-face '((t (:foreground "#535353")))
-  "Face used to indent guide lines."
+(defcustom indent-guide-color "#535353"
+  "Color used for indent guide lines."
+  :type 'string
+  :group 'indent-guide)
+
+(defcustom indent-guide-left-margin 3
+  "Left margin of the guide lines."
+  :type 'number
+  :group 'indent-guide)
+
+(defcustom indent-guide-line-height (frame-char-height)
+  "Line height of the guide lines."
+  :type 'number
+  :group 'indent-guide)
+
+(defcustom indent-guide-dash-length indent-guide-line-height
+  "Dash length of the guide lines."
+  :type 'number
   :group 'indent-guide)
 
 ;; * variables
@@ -167,6 +170,37 @@ the point."
                (goto-char (match-end 1)))
           (goto-char (point-min))))))
 
+(defvar indent-guide--image-cache nil)
+(defun indent-guide--make-image (length position)
+  "Make a string for overlays."
+  (let ((cached (assoc (cons length position) indent-guide--image-cache)))
+    (if cached
+        (cdr cached)
+      (let* ((fcw (frame-char-width))
+             (width (* length fcw))
+             (posn (+ (* position fcw) indent-guide-left-margin))
+             (img (create-image
+                   (with-temp-buffer
+                     (insert "/* XPM */ static char * x[] = {"
+                             (format "\"%d %d 2 1\"" width indent-guide-line-height)
+                             (format ",\". c %s\"" indent-guide-color)
+                             ",\"  c None\"")
+                     (dotimes (i indent-guide-line-height)
+                       (insert (if (zerop (mod (1+ i) (1+ indent-guide-dash-length)))
+                                   (concat ",\"" (make-string width ?\s) "\"")
+                                 (concat ",\"" (make-string posn ?\s) "."
+                                         (make-string (- width posn 1) ?\s) "\""))))
+                     (insert "}")
+                     (buffer-string))
+                   'xpm t :ascent 'center)))
+        (push (cons (cons length position) img) indent-guide--image-cache)
+        img))))
+
+(defun indent-guide--make-string (length position)
+  (let ((str (make-string length ?\s)))
+    (aset str position ?|)
+    (propertize str 'face `((t (:foreground ,indent-guide-color))))))
+
 ;; * generate guides
 
 (defun indent-guide--make-overlay (line col)
@@ -184,56 +218,29 @@ the point."
       (cond ((and (eolp) (<= 0 diff))   ; the line is too short
              ;; <-line-width->  <-diff->
              ;;               []        |
-             (if (setq ov (cl-some
-                           (lambda (ov)
-                             (when (eq (overlay-get ov 'category) 'indent-guide)
-                               ov))
-                           (overlays-in (point) (point))))
-                 ;; we already have an overlay here => append to the existing overlay
-                 ;; (important when "recursive" is enabled)
-                 (setq string (let ((str (overlay-get ov 'before-string)))
-                                (concat str
-                                        (make-string (- diff (length str)) ?\s)
-                                        indent-guide-char))
-                       prop   'before-string)
-               (setq string (concat (make-string diff ?\s) indent-guide-char)
-                     prop   'before-string
-                     ov     (make-overlay (point) (point)))))
+             (setq string (propertize " " 'display (indent-guide--make-image (1+ diff) diff))
+                   prop   'before-string
+                   ov     (make-overlay (point) (point))))
             ((< diff 0)                 ; the column is inside a tab
              ;;  <---tab-width-->
              ;;      <-(- diff)->
              ;;     |            []
-             (if (setq ov (cl-some
-                           (lambda (ov)
-                             (when (eq (overlay-get ov 'category) 'indent-guide)
-                               ov))
-                           (overlays-in (1- (point)) (point))))
-                 ;; we already have an overlay here => modify the existing overlay
-                 ;; (important when "recursive" is enabled)
-                 (setq string (let ((str (overlay-get ov 'display)))
-                                (aset str (+ 1 tab-width diff) ?|)
-                                str)
-                       prop   'display)
-               (setq string (concat (make-string (+ tab-width diff) ?\s)
-                                    indent-guide-char
-                                    (make-string (1- (- diff)) ?\s))
-                     prop   'display
-                     ov     (make-overlay (point) (1- (point))))))
+             (setq string (indent-guide--make-image tab-width (- diff))
+                   prop   'display
+                   ov     (make-overlay (point) (1- (point)))))
             ((looking-at "\t")          ; okay but looking at tab
              ;;    <-tab-width->
              ;; [|]
-             (setq string (concat indent-guide-char
-                                  (make-string (1- tab-width) ?\s))
+             (setq string (indent-guide--make-image tab-width 0)
                    prop   'display
                    ov     (make-overlay (point) (1+ (point)))))
             (t                          ; okay and looking at a space
-             (setq string indent-guide-char
+             (setq string (indent-guide--make-image 1 0)
                    prop   'display
                    ov     (make-overlay (point) (1+ (point))))))
       (when ov
         (overlay-put ov 'category 'indent-guide)
-        (overlay-put ov prop
-                     (propertize string 'face 'indent-guide-face))))))
+        (overlay-put ov prop string)))))
 
 (defun indent-guide-show ()
   (interactive)
@@ -247,11 +254,7 @@ the point."
         (indent-guide--beginning-of-level)
         (setq line-col (current-column)
               line-start (max (1+ (line-number-at-pos))
-                              (line-number-at-pos win-start)))
-        ;; if recursive draw is enabled and (line-col > 0), recurse
-        ;; into lower level.
-        (when (and indent-guide-recursive (> line-col 0))
-          (indent-guide-show)))
+                              (line-number-at-pos win-start))))
       (when (> line-col indent-guide-threshold)
         ;; decide line-end
         (save-excursion
