@@ -111,8 +111,11 @@
   :type 'number
   :group 'indent-guide)
 
-(defcustom indent-guide-line-height (frame-char-height)
-  "Line height of the guide lines."
+(defcustom indent-guide-line-height-adjustment 0
+  "Height in pixels added to `frame-line-height'. The value can
+also be negative. This adjustment may be useful on some
+platforms, on which increases the line height when an image whose
+height is 100% of the line hight is rendered in the line."
   :type 'number
   :group 'indent-guide)
 
@@ -178,13 +181,14 @@ the point."
       (let* ((fcw (frame-char-width))
              (width (* length fcw))
              (posn (+ (* position fcw) indent-guide-line-left-margin))
+             (height (+ (frame-char-height) indent-guide-line-height-adjustment))
              (img (create-image
                    (with-temp-buffer
                      (insert "/* XPM */ static char * x[] = {"
-                             (format "\"%d %d 2 1\"" width indent-guide-line-height)
-                             (format ",\". c %s\"" indent-guide-color)
+                             (format "\"%d %d 2 1\"" width height)
+                             (format ",\". c %s\"" indent-guide-line-color)
                              ",\"  c None\"")
-                     (dotimes (i indent-guide-line-height)
+                     (dotimes (i height)
                        (insert (if (and indent-guide-line-dash-length
                                         (zerop (mod (1+ i) (1+ indent-guide-line-dash-length))))
                                    (concat ",\"" (make-string width ?\s) "\"")
