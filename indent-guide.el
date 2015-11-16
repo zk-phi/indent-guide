@@ -106,13 +106,35 @@
   :type 'string
   :group 'indent-guide)
 
-(defcustom indent-guide-line-left-margin 3
+(defcustom indent-guide-char-width 'dynamic
+  "Width in pixels of a character. This variable can be either a
+natural number or `dynamic' and used to render guide lines."
+  :group 'indent-guide)
+
+(defcustom indent-guide-char-height 'dynamic
+  "Height in pixels of a character. This variable can be either a
+natural number or `dynamic' and used to render guide lines."
+  :group 'indent-guide)
+
+(defcustom indent-guide-line-char ?|
+  "Char used to render guide lines when XPM images are not
+available."
+  :group 'indent-guide)
+
+(defcustom indent-guide-line-enable-xpm t
+  "When non-nil, XPM images are used to render guide lines."
+  :group 'indent-guide)
+
+(defcustom indent-guide-line-left-margin (/ (frame-char-width) 2)
   "Left margin of the guide lines."
   :type 'number
   :group 'indent-guide)
 
-(defcustom indent-guide-line-height (frame-char-height)
-  "Line height of the guide lines."
+(defcustom indent-guide-line-height-adjustment 0
+  "Height in pixels added to `frame-line-height'. The value can
+also be negative. This adjustment may be useful on some
+platforms, on which increases the line height when an image whose
+height is 100% of the line hight is rendered in the line."
   :type 'number
   :group 'indent-guide)
 
@@ -170,21 +192,34 @@ the point."
                (goto-char (match-end 1)))
           (goto-char (point-min))))))
 
+(defun indent-guide--get-char-width ()
+  (let* ((p1 (pos-visible-in-window-p (point) nil t))
+         (p2 (and (not (eolp))
+                  (pos-visible-in-window-p (1+ (point)) nil t))))
+    (if (and p1 p2) (- (car p2) (car p1)) (frame-char-width))))
+
+(defun indent-guide--get-char-height ()
+  (let* ((p1 (pos-visible-in-window-p (point) nil t))
+         (p2 (save-excursion
+               (and (zerop (forward-line 1))
+                    (pos-visible-in-window-p (point) nil t)))))
+    (if (and p1 p2) (- (cadr p2) (cadr p1)) (frame-char-height))))
+
 (defvar indent-guide--image-cache nil)
-(defun indent-guide--make-image (length position &optional stringp)
+(defun indent-guide--make-image (length position char-width char-height &optional stringp)
   "Make a string for overlays."
-  (let ((cached (assoc (cons length position) indent-guide--image-cache)))
+  (let* ((width (* length char-width))
+         (height (+ char-height indent-guide-line-height-adjustment))
+         (cached (assoc (list width height position) indent-guide--image-cache)))
     (unless cached
-      (let* ((fcw (frame-char-width))
-             (width (* length fcw))
-             (posn (+ (* position fcw) indent-guide-line-left-margin))
+      (let* ((posn (+ (* position char-width) indent-guide-line-left-margin))
              (img (create-image
                    (with-temp-buffer
                      (insert "/* XPM */ static char * x[] = {"
-                             (format "\"%d %d 2 1\"" width indent-guide-line-height)
+                             (format "\"%d %d 2 1\"" width height)
                              (format ",\". c %s\"" indent-guide-color)
                              ",\"  c None\"")
-                     (dotimes (i indent-guide-line-height)
+                     (dotimes (i height)
                        (insert (if (and indent-guide-line-dash-length
                                         (zerop (mod (1+ i) (1+ indent-guide-line-dash-length))))
                                    (concat ",\"" (make-string width ?\s) "\"")
@@ -194,49 +229,59 @@ the point."
                      (buffer-string))
                    'xpm t :ascent 'center))
              (str (let ((s (make-string length ?\s)))
-                    (aset s position ?\|)
-                    (propertize s 'face `((t (:foreground ,indent-guide-color)))))))
-        (push (setq cached (cons (cons length position) (cons str img)))
+                    (aset s position indent-guide-line-char)
+                    (propertize s 'face `(:foreground ,indent-guide-color)))))
+        (push (setq cached (cons (list width height position) (cons str img)))
               indent-guide--image-cache)))
     (let ((img (cdr (cdr cached))) (str (car (cdr cached))))
-      (cond ((not window-system) str)
-            (stringp             (propertize str 'display img))
-            (t                   img)))))
+      (cond ((or (not indent-guide-line-enable-xpm)
+                 (not window-system))
+             str)
+            (stringp
+             (propertize str 'display img))
+            (t
+             img)))))
 
 ;; * generate guides
 
 (defun indent-guide--make-overlay (line col)
   "draw line at (line, col)"
-  (let (diff string ov prop)
-    (save-excursion
-      ;; try to goto (line, col)
-      (goto-char (point-min))
-      (forward-line (1- line))
-      (move-to-column col)
+  (save-excursion
+    ;; try to goto (line, col)
+    (goto-char (point-min))
+    (forward-line (1- line))
+    (move-to-column col)
+    (let ((char-width (if (eq indent-guide-char-width 'dynamic)
+                          (indent-guide--get-char-width)
+                        indent-guide-char-width))
+          (char-height (if (eq indent-guide-char-height 'dynamic)
+                           (indent-guide--get-char-height)
+                         indent-guide-char-height))
+          size diff string ov prop)
       ;; calculate difference from the actual col
       (setq diff (- col (current-column)))
       ;; make overlay or not
       (cond ((and (eolp) (<= 0 diff))   ; the line is too short
              ;; <-line-width->  <-diff->
              ;;               []        |
-             (setq string (indent-guide--make-image (1+ diff) diff t)
+             (setq string (indent-guide--make-image (1+ diff) diff char-width char-height t)
                    prop   'before-string
                    ov     (make-overlay (point) (point))))
             ((< diff 0)                 ; the column is inside a tab
              ;;  <---tab-width-->
              ;;      <-(- diff)->
              ;;     |            []
-             (setq string (indent-guide--make-image tab-width (- diff))
+             (setq string (indent-guide--make-image tab-width (- diff) char-width char-height)
                    prop   'display
                    ov     (make-overlay (point) (1- (point)))))
             ((looking-at "\t")          ; okay but looking at tab
              ;;    <-tab-width->
              ;; [|]
-             (setq string (indent-guide--make-image tab-width 0)
+             (setq string (indent-guide--make-image tab-width 0 char-width char-height)
                    prop   'display
                    ov     (make-overlay (point) (1+ (point)))))
             (t                          ; okay and looking at a space
-             (setq string (indent-guide--make-image 1 0)
+             (setq string (indent-guide--make-image 1 0 char-width char-height)
                    prop   'display
                    ov     (make-overlay (point) (1+ (point))))))
       (when ov
