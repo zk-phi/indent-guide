@@ -116,8 +116,8 @@
   :type 'number
   :group 'indent-guide)
 
-(defcustom indent-guide-line-dash-length indent-guide-line-height
-  "Dash length of the guide lines."
+(defcustom indent-guide-line-dash-length nil
+  "Dash length of the guide lines, or `nil' for solid lines."
   :type 'number
   :group 'indent-guide)
 
@@ -185,7 +185,8 @@ the point."
                              (format ",\". c %s\"" indent-guide-color)
                              ",\"  c None\"")
                      (dotimes (i indent-guide-line-height)
-                       (insert (if (zerop (mod (1+ i) (1+ indent-guide-line-dash-length)))
+                       (insert (if (and indent-guide-line-dash-length
+                                        (zerop (mod (1+ i) (1+ indent-guide-line-dash-length))))
                                    (concat ",\"" (make-string width ?\s) "\"")
                                  (concat ",\"" (make-string posn ?\s) "."
                                          (make-string (- width posn 1) ?\s) "\""))))
