@@ -171,11 +171,10 @@ the point."
           (goto-char (point-min))))))
 
 (defvar indent-guide--image-cache nil)
-(defun indent-guide--make-image (length position)
+(defun indent-guide--make-image (length position &optional stringp)
   "Make a string for overlays."
   (let ((cached (assoc (cons length position) indent-guide--image-cache)))
-    (if cached
-        (cdr cached)
+    (unless cached
       (let* ((fcw (frame-char-width))
              (width (* length fcw))
              (posn (+ (* position fcw) indent-guide-left-margin))
@@ -192,14 +191,16 @@ the point."
                                          (make-string (- width posn 1) ?\s) "\""))))
                      (insert "}")
                      (buffer-string))
-                   'xpm t :ascent 'center)))
-        (push (cons (cons length position) img) indent-guide--image-cache)
-        img))))
-
-(defun indent-guide--make-string (length position)
-  (let ((str (make-string length ?\s)))
-    (aset str position ?|)
-    (propertize str 'face `((t (:foreground ,indent-guide-color))))))
+                   'xpm t :ascent 'center))
+             (str (let ((s (make-string length ?\s)))
+                    (aset s position ?\|)
+                    (propertize s 'face `((t (:foreground ,indent-guide-color)))))))
+        (push (setq cached (cons (cons length position) (cons str img)))
+              indent-guide--image-cache)))
+    (let ((img (cdr (cdr cached))) (str (car (cdr cached))))
+      (cond ((not window-system) str)
+            (stringp             (propertize str 'display img))
+            (t                   img)))))
 
 ;; * generate guides
 
@@ -218,7 +219,7 @@ the point."
       (cond ((and (eolp) (<= 0 diff))   ; the line is too short
              ;; <-line-width->  <-diff->
              ;;               []        |
-             (setq string (propertize " " 'display (indent-guide--make-image (1+ diff) diff))
+             (setq string (indent-guide--make-image (1+ diff) diff t)
                    prop   'before-string
                    ov     (make-overlay (point) (point))))
             ((< diff 0)                 ; the column is inside a tab

@@ -54,5 +54,3 @@ indent-guide-global-mode.
 - looks better
 
 - =indent-guide-recursive= option is removed
-
-- doesn't work on terminals
