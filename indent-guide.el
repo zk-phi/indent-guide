@@ -33,10 +33,10 @@
 ;;
 ;;   (indent-guide-global-mode)
 
-;; Column lines are propertized with "indent-guide-color". So you may
+;; Column lines are propertized with "indent-guide-line-color". So you may
 ;; configure this face to make guides more pretty in your colorscheme.
 ;;
-;;   (setq indent-guide-color "dimgray")
+;;   (setq indent-guide-line-color "dimgray")
 
 ;;; Change Log:
 
@@ -101,7 +101,7 @@
   :type 'number
   :group 'indent-guide)
 
-(defcustom indent-guide-color "#535353"
+(defcustom indent-guide-line-color "#535353"
   "Color used for indent guide lines."
   :type 'string
   :group 'indent-guide)
@@ -199,7 +199,7 @@ the point."
                    'xpm t :ascent 'center))
              (str (let ((s (make-string length ?\s)))
                     (aset s position ?\|)
-                    (propertize s 'face `((t (:foreground ,indent-guide-color)))))))
+                    (propertize s 'face `((t (:foreground ,indent-guide-line-color)))))))
         (push (setq cached (cons (cons length position) (cons str img)))
               indent-guide--image-cache)))
     (let ((img (cdr (cdr cached))) (str (car (cdr cached))))
