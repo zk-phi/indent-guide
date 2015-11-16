@@ -45,9 +45,9 @@ indent-guide-global-mode.
 
 : (setq indent-guide-line-left-margin 0)
 
-- Line height (useful on some platforms that indent-guide breaks the line-height)
+- Height (useful on some platforms that indent-guide breaks the line-height)
 
-: (setq indent-guide-line-height (1- (frame-char-height)))
+: (setq indent-guide-char-height (1- (frame-char-height)))
 
 ** Comparison with ASCII version
 
