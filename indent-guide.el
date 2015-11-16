@@ -114,6 +114,14 @@ some platforms, on which increases the line height when an image
 whose height is 100% of the line hight is rendered in the line."
   :group 'indent-guide)
 
+(defcustom indent-guide-line-char ?|
+  "Char used to render lines when XPM images are not available."
+  :group 'indent-guide)
+
+(defcustom indent-guide-line-enable-xpm window-system
+  "When non-nil, lines are rendered with XPM images."
+  :group 'indent-guide)
+
 (defcustom indent-guide-line-color "#535353"
   "Color used for indent guide lines."
   :type 'string
@@ -201,14 +209,14 @@ the point."
                      (buffer-string))
                    'xpm t :ascent 'center))
              (str (let ((s (make-string length ?\s)))
-                    (aset s position ?\|)
+                    (aset s position indent-guide-line-char)
                     (propertize s 'face `(:foreground ,indent-guide-line-color)))))
         (push (setq cached (cons (cons length position) (cons str img)))
               indent-guide--image-cache)))
     (let ((img (cdr (cdr cached))) (str (car (cdr cached))))
-      (cond ((not window-system) str)
-            (stringp             (propertize str 'display img))
-            (t                   img)))))
+      (cond ((not indent-guide-line-enable-xpm) str)
+            (stringp                            (propertize str 'display img))
+            (t                                  img)))))
 
 ;; * generate guides
 
