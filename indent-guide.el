@@ -101,21 +101,26 @@
   :type 'number
   :group 'indent-guide)
 
+(defcustom indent-guide-char-width (frame-char-width)
+  "Width in pixels of a character. This value is used when
+rendering guide lines."
+  :group 'indent-guide)
+
+(defcustom indent-guide-char-height (frame-char-height)
+  "Height in pixels of a character. This value is used when
+rendering guide lines. You can adjust this value to render guide
+lines shorter/longer than the line height, which may be useful on
+some platforms, on which increases the line height when an image
+whose height is 100% of the line hight is rendered in the line."
+  :group 'indent-guide)
+
 (defcustom indent-guide-line-color "#535353"
   "Color used for indent guide lines."
   :type 'string
   :group 'indent-guide)
 
-(defcustom indent-guide-line-left-margin (/ (frame-char-width) 2)
+(defcustom indent-guide-line-left-margin (/ indent-guide-char-width 2)
   "Left margin of the guide lines."
-  :type 'number
-  :group 'indent-guide)
-
-(defcustom indent-guide-line-height-adjustment 0
-  "Height in pixels added to `frame-line-height'. The value can
-also be negative. This adjustment may be useful on some
-platforms, on which increases the line height when an image whose
-height is 100% of the line hight is rendered in the line."
   :type 'number
   :group 'indent-guide)
 
@@ -178,17 +183,15 @@ the point."
   "Make a string for overlays."
   (let ((cached (assoc (cons length position) indent-guide--image-cache)))
     (unless cached
-      (let* ((fcw (frame-char-width))
-             (width (* length fcw))
-             (posn (+ (* position fcw) indent-guide-line-left-margin))
-             (height (+ (frame-char-height) indent-guide-line-height-adjustment))
+      (let* ((width (* length indent-guide-char-width))
+             (posn (+ (* position indent-guide-char-width) indent-guide-line-left-margin))
              (img (create-image
                    (with-temp-buffer
                      (insert "/* XPM */ static char * x[] = {"
-                             (format "\"%d %d 2 1\"" width height)
+                             (format "\"%d %d 2 1\"" width indent-guide-char-height)
                              (format ",\". c %s\"" indent-guide-line-color)
                              ",\"  c None\"")
-                     (dotimes (i height)
+                     (dotimes (i indent-guide-char-height)
                        (insert (if (and indent-guide-line-dash-length
                                         (zerop (mod (1+ i) (1+ indent-guide-line-dash-length))))
                                    (concat ",\"" (make-string width ?\s) "\"")
