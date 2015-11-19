@@ -167,8 +167,7 @@ the point. When no such points are found, just return nil."
 
 (defun indent-guide--make-overlay (line col)
   "draw line at (line, col)"
-  (let ((original-pos (point))
-        diff string ov prop)
+  (let (diff string ov prop)
     (save-excursion
       ;; try to goto (line, col)
       (goto-char (point-min))
