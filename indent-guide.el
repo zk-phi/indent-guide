@@ -146,13 +146,12 @@
 
 (defun indent-guide--beginning-of-level ()
   "Move to the beginning of current indentation level and return
-the point."
+the point. When no such points are found, just return nil."
   (back-to-indentation)
   (let* ((base-level (if (not (eolp))
                          (current-column)
                        (max (save-excursion
                               (skip-chars-forward "\s\t\n")
-                              (back-to-indentation)
                               (current-column))
                             (save-excursion
                               (skip-chars-backward "\s\t\n")
@@ -160,12 +159,9 @@ the point."
                               (current-column)))))
          (candidates (indent-guide--indentation-candidates (1- base-level)))
          (regex (concat "^" (regexp-opt candidates t) "[^\s\t\n]")))
-    (if (zerop base-level)
-        (point)
-      (beginning-of-line)
-      (or (and (search-backward-regexp regex nil t)
-               (goto-char (match-end 1)))
-          (goto-char (point-min))))))
+    (unless (zerop base-level)
+      (and (search-backward-regexp regex nil t)
+           (goto-char (match-end 1))))))
 
 ;; * generate guides
 
