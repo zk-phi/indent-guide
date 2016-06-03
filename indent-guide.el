@@ -80,7 +80,7 @@
 
 (defgroup indent-guide nil
   "Show vertical lines to guide indentation."
-  :group 'emacs)
+  :group 'environment)
 
 (defcustom indent-guide-char "|"
   "Character used as vertical line."
