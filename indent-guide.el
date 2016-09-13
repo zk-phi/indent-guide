@@ -114,7 +114,7 @@
   :type 'number
   :group 'indent-guide)
 
-(defface indent-guide-face '((t (:foreground "#535353")))
+(defface indent-guide-face '((t (:foreground "#535353" :slant normal)))
   "Face used to indent guide lines."
   :group 'indent-guide)
 
