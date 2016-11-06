@@ -30,7 +30,7 @@ indent-guide-global-mode.
 ** Configuration
 
 Column lines are propertized with "indent-guide-face". So you may
-configure this face to make liens more pretty in your colorscheme.
+configure this face to make lines more pretty in your colorscheme.
 
 : (set-face-background 'indent-guide-face "dimgray")
 
