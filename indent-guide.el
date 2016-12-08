@@ -92,7 +92,8 @@
     special-mode
     dired-mode
     eww-mode
-    eshell-mode)
+    eshell-mode
+    Custom-mode)
   "List of major-modes in which indent-guide should be turned off."
   :type '(repeat symbol)
   :group 'indent-guide)
