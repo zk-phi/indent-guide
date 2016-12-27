@@ -190,9 +190,10 @@ the point. When no such points are found, just return nil."
                  (setq string (let ((str (overlay-get ov 'before-string)))
                                 (concat str
                                         (make-string (- diff (length str)) ?\s)
-                                        indent-guide-char))
+                                        (propertize indent-guide-char 'face 'indent-guide-face)))
                        prop   'before-string)
-               (setq string (concat (make-string diff ?\s) indent-guide-char)
+               (setq string (concat (make-string diff ?\s)
+                                    (propertize indent-guide-char 'face 'indent-guide-face))
                      prop   'before-string
                      ov     (make-overlay (point) (point)))))
             ((< diff 0)                 ; the column is inside a tab
@@ -211,25 +212,24 @@ the point. When no such points are found, just return nil."
                                 str)
                        prop   'display)
                (setq string (concat (make-string (+ tab-width diff) ?\s)
-                                    indent-guide-char
+                                    (propertize indent-guide-char 'face 'indent-guide-face)
                                     (make-string (1- (- diff)) ?\s))
                      prop   'display
                      ov     (make-overlay (point) (1- (point))))))
             ((looking-at "\t")          ; okay but looking at tab
              ;;    <-tab-width->
              ;; [|]
-             (setq string (concat indent-guide-char
+             (setq string (concat (propertize indent-guide-char 'face 'indent-guide-face)
                                   (make-string (1- tab-width) ?\s))
                    prop   'display
                    ov     (make-overlay (point) (1+ (point)))))
             (t                          ; okay and looking at a space
-             (setq string indent-guide-char
+             (setq string (propertize indent-guide-char 'face 'indent-guide-face)
                    prop   'display
                    ov     (make-overlay (point) (1+ (point))))))
       (when ov
         (overlay-put ov 'category 'indent-guide)
-        (overlay-put ov prop
-                     (propertize string 'face 'indent-guide-face))))))
+        (overlay-put ov prop string)))))
 
 (defun indent-guide-show ()
   (interactive)
