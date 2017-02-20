@@ -237,8 +237,7 @@ the point. When no such points are found, just return nil."
               (active-minibuffer-window))
     (let ((win-start (window-start))
           (win-end (window-end nil t))
-          line-col line-start line-end
-          last-col)
+          line-col line-start line-end)
       ;; decide line-col, line-start
       (save-excursion
         (indent-guide--beginning-of-level)
@@ -257,10 +256,10 @@ the point. When no such points are found, just return nil."
                       (forward-line 1)
                       (not (eobp))
                       (<= (point) win-end)))
-          (when (>= line-col (setq last-col (current-column)))
+          (when (>= line-col (current-column))
             (forward-line -1)
             (while (and (looking-at "[\s\t\n]*$")
-                        (> (point) line-start)
+                        (> (line-number-at-pos) line-start)
                         (zerop (forward-line -1)))))
           (setq line-end (line-number-at-pos)))
         ;; draw line
