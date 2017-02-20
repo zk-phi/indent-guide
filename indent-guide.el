@@ -115,6 +115,15 @@
   :type 'number
   :group 'indent-guide)
 
+(defcustom indent-guide-lispy-modes
+  '(lisp-mode emacs-lisp-mode scheme-mode
+              lisp-interaction-mode gauche-mode scheme-mode
+              clojure-mode racket-mode egison-mode)
+  "List of lisp-like language modes, in which the last brace of
+blocks are NOT placed at beginning of line."
+  :type '(repeat symbol)
+  :group 'indent-guide)
+
 (defface indent-guide-face '((t (:foreground "#535353" :slant normal)))
   "Face used to indent guide lines."
   :group 'indent-guide)
@@ -258,9 +267,10 @@ the point. When no such points are found, just return nil."
                       (<= (point) win-end)))
           (when (>= line-col (current-column))
             (forward-line -1)
-            (while (and (looking-at "[\s\t\n]*$")
-                        (> (line-number-at-pos) line-start)
-                        (zerop (forward-line -1)))))
+            (when (memq major-mode indent-guide-lispy-modes)
+              (while (and (looking-at "[\s\t\n]*$")
+                          (> (line-number-at-pos) line-start)
+                          (zerop (forward-line -1))))))
           (setq line-end (line-number-at-pos)))
         ;; draw line
         (dotimes (tmp (- (1+ line-end) line-start))
