@@ -1,6 +1,6 @@
 ;;; indent-guide.el --- show vertical lines to guide indentation
 
-;; Copyright (C) 2013-2015 zk_phi
+;; Copyright (C) 2013- zk_phi
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 
 ;; Author: zk_phi
 ;; URL: http://hins11.yu-yake.com/
-;; Version: 2.3.0
+;; Version: 2.3.1
 
 ;;; Commentary:
 
@@ -69,12 +69,13 @@
 ;; 2.1.6 add option "indent-guide-recursive"
 ;; 2.2.0 add option "indent-guide-threshold"
 ;; 2.3.0 use regexp search to find the beginning of level
+;; 2.3.1 add option "indent-guide-lispy-modes"
 
 ;;; Code:
 
 (require 'cl-lib)
 
-(defconst indent-guide-version "2.3.0")
+(defconst indent-guide-version "2.3.1")
 
 ;; * customs
 
