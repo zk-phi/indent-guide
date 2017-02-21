@@ -266,13 +266,13 @@ the point. When no such points are found, just return nil."
                       (forward-line 1)
                       (not (eobp))
                       (<= (point) win-end)))
-          (when (>= line-col (current-column))
-            (forward-line -1)
-            (when (memq major-mode indent-guide-lispy-modes)
-              (while (and (looking-at "[\s\t\n]*$")
-                          (> (line-number-at-pos) line-start)
-                          (zerop (forward-line -1))))))
-          (setq line-end (line-number-at-pos)))
+          (cond ((< line-col (current-column))
+                 (setq line-end (line-number-at-pos)))
+                ((not (memq major-mode indent-guide-lispy-modes))
+                 (setq line-end (1- (line-number-at-pos))))
+                (t
+                 (skip-chars-backward "\s\t\n")
+                 (setq line-end (line-number-at-pos)))))
         ;; draw line
         (dotimes (tmp (- (1+ line-end) line-start))
           (indent-guide--make-overlay (+ line-start tmp) line-col))
@@ -295,6 +295,8 @@ the point. When no such points are found, just return nil."
                                    (setq indent-guide--timer-object nil)))))))
 
 (defun indent-guide-pre-command-hook ()
+  ;; some commands' behavior may affected by indent-guide overlays, so
+  ;; remove all overlays in pre-command-hook.
   (indent-guide-remove))
 
 ;;;###autoload
