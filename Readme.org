@@ -20,16 +20,16 @@ Require this script
 
 : (require 'indent-guide)
 
-and call command "M-x indent-guide-mode".
+and call command =M-x indent-guide-mode=.
 
-If you want to enable indent-guide-mode in all buffers, call function
-indent-guide-global-mode.
+If you want to enable =indent-guide-mode= in all buffers, call
+function =indent-guide-global-mode=.
 
 : (indent-guide-global-mode)
 
 ** Configuration
 
-Column lines are propertized with "indent-guide-face". So you may
+Column lines are propertized with =indent-guide-face=. So you may
 configure this face to make lines more pretty in your colorscheme.
 
 : (set-face-background 'indent-guide-face "dimgray")
@@ -39,20 +39,23 @@ can set delay.
 
 : (setq indent-guide-delay 0.1)
 
-To show not only one guide line but all guide lines recursively, set
-"indent-guide-recursive" non-nil.
-
-: (setq indent-guide-recursive t)
-
 You may also change the character for guides.
 
 : (setq indent-guide-char ":")
 
-** Comparison with highlight-indentation
+NOT RECOMMENDED: To show not only one guide line but all guide lines
+recursively, set =indent-guide-recursive= non-nil.
+
+: (setq indent-guide-recursive t)
+
+=indent-guide-recursive= seems buggy and laggy, so I recommend
+=highlight-indent-guide= for the purpose.
+
+** Comparisons with highlight-indentation
 
 - look and feel
 
-- better indentation handling for LISP-like languages
+- better block detection in LISP-like languages
 
   : (foo                  (foo
   : |(foobar baz          |(foobar baz
@@ -61,16 +64,16 @@ You may also change the character for guides.
   :
   :    indent-guide     highlight-indentation
 
-- indent-guide works fine even when the code is indented with TABs
+- supports TABs
 
-- indent-guide is slower than highlight-indentation especially in
-  very large blocks
+- worse in performance, especially when you open a file that includes
+  very large, deep blocks
 
 ** Known Limitations
 
 does not work perfectly with following modes (commands) :
 
-+ company-mode, auto-complete-mode, popup.el (tooltip is sometimes not rendered perfectly)
-+ commands in pager.el
+- =company-mode=, =auto-complete-mode=, =popup.el= (tooltips may not rendered perfectly)
+- =pager.el= (guide lines are not rendered immediately, after =pager-up/down=)
 
 contributions are welcome !
