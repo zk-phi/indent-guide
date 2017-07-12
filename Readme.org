@@ -49,7 +49,7 @@ recursively, set =indent-guide-recursive= non-nil.
 : (setq indent-guide-recursive t)
 
 =indent-guide-recursive= seems buggy and laggy, so I recommend
-=highlight-indent-guide= for the purpose.
+the =highlight-indentation= package for that purpose.
 
 ** Comparisons with highlight-indentation
 
