@@ -106,13 +106,13 @@
 
 (defcustom indent-guide-delay nil
   "When a positive number, rendering guide lines is delayed DELAY
-  seconds."
+seconds."
   :type 'number
   :group 'indent-guide)
 
 (defcustom indent-guide-threshold -1
   "Guide lines are drawn only when the column number is over this
-  value."
+value."
   :type 'number
   :group 'indent-guide)
 
