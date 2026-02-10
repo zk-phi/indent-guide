@@ -18,7 +18,7 @@
 
 ;; Author: zk_phi
 ;; URL: http://hins11.yu-yake.com/
-;; Version: 2.3.1
+;; Version: 2.4
 
 ;;; Commentary:
 
@@ -83,8 +83,18 @@
   "Show vertical lines to guide indentation."
   :group 'environment)
 
-(defcustom indent-guide-char "|"
-  "Character used as vertical line."
+(defcustom indent-guide-char-middle "│"
+  "Character used for the middle of the guide line."
+  :type 'string
+  :group 'indent-guide)
+
+(defcustom indent-guide-char-top "┌"
+  "Character used for the top of the guide line."
+  :type 'string
+  :group 'indent-guide)
+
+(defcustom indent-guide-char-bottom "└"
+  "Character used for the bottom of the guide line."
   :type 'string
   :group 'indent-guide)
 
@@ -177,9 +187,21 @@ the point. When no such points are found, just return nil."
       (and (search-backward-regexp regex nil t)
            (goto-char (match-end 1))))))
 
+;;; NOTE(arka): custom fn for decorated guide line
+(defun indent-guide--choose-char (line line-start line-end)
+  "Return the appropriate guide character for LINE."
+  (if (= line-start line-end)
+      indent-guide-char-middle
+    (cond
+     ((= line line-start) indent-guide-char-top)
+     ((= line line-end) indent-guide-char-bottom)
+     (t indent-guide-char-middle)))
+  )
+
 ;; * generate guides
 
-(defun indent-guide--make-overlay (line col)
+;;; NOTE(arka): extra `line-start` and `line-end` are parameters added for decorated guide line
+(defun indent-guide--make-overlay (line col line-start line-end)
   "draw line at (line, col)"
   (let (diff string ov prop)
     (save-excursion
@@ -203,10 +225,14 @@ the point. When no such points are found, just return nil."
                  (setq string (let ((str (overlay-get ov 'before-string)))
                                 (concat str
                                         (make-string (- diff (length str)) ?\s)
-                                        (propertize indent-guide-char 'face 'indent-guide-face)))
+                                        ;;; NOTE(arka): automatic indentaiton guide character selection
+                                        ;;; based on line number count.
+                                        (propertize (indent-guide--choose-char line line-start line-end)
+                                                    'face 'indent-guide-face)))
                        prop   'before-string)
                (setq string (concat (make-string diff ?\s)
-                                    (propertize indent-guide-char 'face 'indent-guide-face))
+                                    (propertize (indent-guide--choose-char line line-start line-end)
+                                                'face 'indent-guide-face))
                      prop   'before-string
                      ov     (make-overlay (point) (point)))))
             ((< diff 0)                 ; the column is inside a tab
@@ -225,19 +251,22 @@ the point. When no such points are found, just return nil."
                                 str)
                        prop   'display)
                (setq string (concat (make-string (+ tab-width diff) ?\s)
-                                    (propertize indent-guide-char 'face 'indent-guide-face)
+                                    (propertize (indent-guide--choose-char line line-start line-end)
+                                                'face 'indent-guide-face)
                                     (make-string (1- (- diff)) ?\s))
                      prop   'display
                      ov     (make-overlay (point) (1- (point))))))
             ((looking-at "\t")          ; okay but looking at tab
              ;;    <-tab-width->
              ;; [|]
-             (setq string (concat (propertize indent-guide-char 'face 'indent-guide-face)
+             (setq string (concat (propertize (indent-guide--choose-char line line-start line-end)
+                                              'face 'indent-guide-face)
                                   (make-string (1- tab-width) ?\s))
                    prop   'display
                    ov     (make-overlay (point) (1+ (point)))))
             (t                          ; okay and looking at a space
-             (setq string (propertize indent-guide-char 'face 'indent-guide-face)
+             (setq string (propertize (indent-guide--choose-char line line-start line-end)
+                                      'face 'indent-guide-face)
                    prop   'display
                    ov     (make-overlay (point) (1+ (point))))))
       (when ov
@@ -246,8 +275,10 @@ the point. When no such points are found, just return nil."
 
 (defun indent-guide-show ()
   (interactive)
-  (unless (or (indent-guide--active-overlays)
-              (active-minibuffer-window))
+  ;;; NOTE(arka): redraw only when needed
+  (unless (active-minibuffer-window)
+    (indent-guide-remove)
+    
     (let ((win-start (window-start))
           (win-end (window-end nil t))
           line-col line-start line-end)
@@ -278,7 +309,7 @@ the point. When no such points are found, just return nil."
                  (setq line-end (line-number-at-pos)))))
         ;; draw line
         (dotimes (tmp (- (1+ line-end) line-start))
-          (indent-guide--make-overlay (+ line-start tmp) line-col))
+          (indent-guide--make-overlay (+ line-start tmp) line-col line-start line-end))
         (remove-overlays (point) (point) 'category 'indent-guide)))))
 
 (defun indent-guide-remove ()
@@ -297,10 +328,16 @@ the point. When no such points are found, just return nil."
                                    (indent-guide-show)
                                    (setq indent-guide--timer-object nil)))))))
 
-(defun indent-guide-pre-command-hook ()
-  ;; some commands' behavior may affected by indent-guide overlays, so
-  ;; remove all overlays in pre-command-hook.
-  (indent-guide-remove))
+;;; NOTE(arka): root cause of flickering effect. we don't actually need
+;;; pre-hook to redraw guides on each command. 
+;; (defun indent-guide-pre-command-hook ()
+;;   ;; some commands' behavior may affected by indent-guide overlays, so
+;;   ;; remove all overlays in pre-command-hook.
+;;   (indent-guide-remove))
+
+;;; NOTE(arka): fn to fix flickering effect when scrolling.
+(defun indent-guide--window-scroll-hook (&rest _)
+  (indent-guide-show))
 
 ;;;###autoload
 (define-minor-mode indent-guide-mode
@@ -310,10 +347,11 @@ the point. When no such points are found, just return nil."
   :global nil
   (if indent-guide-mode
       (progn
-        (add-hook 'pre-command-hook 'indent-guide-pre-command-hook nil t)
-        (add-hook 'post-command-hook 'indent-guide-post-command-hook nil t))
-    (remove-hook 'pre-command-hook 'indent-guide-pre-command-hook t)
-    (remove-hook 'post-command-hook 'indent-guide-post-command-hook t)))
+        ;;; NOTE(arka): only use post-hook. pre-hook is now depricated
+        (add-hook 'post-command-hook 'indent-guide-post-command-hook nil t)
+        (add-hook 'window-scroll-functions 'indent-guide--window-scroll-hook nil t))
+    (remove-hook 'post-command-hook 'indent-guide-post-command-hook t)
+    (remove-hook 'window-scroll-functions 'indent-guide--window-scroll-hook t)))
 
 ;;;###autoload
 (define-globalized-minor-mode indent-guide-global-mode
