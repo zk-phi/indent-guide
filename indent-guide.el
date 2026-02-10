@@ -75,7 +75,7 @@
 
 (require 'cl-lib)
 
-(defconst indent-guide-version "2.3.1")
+(defconst indent-guide-version "2.4")
 
 ;; * customs
 
@@ -83,18 +83,18 @@
   "Show vertical lines to guide indentation."
   :group 'environment)
 
-(defcustom indent-guide-char-middle "│"
-  "Character used for the middle of the guide line."
+(defcustom indent-guide-char "|"
+  "Character used for the guide line."  
   :type 'string
   :group 'indent-guide)
 
-(defcustom indent-guide-char-top "┌"
-  "Character used for the top of the guide line."
+(defcustom indent-guide-char-top nil
+  "when non-nil, character used for the top of the guide line."
   :type 'string
   :group 'indent-guide)
 
-(defcustom indent-guide-char-bottom "└"
-  "Character used for the bottom of the guide line."
+(defcustom indent-guide-char-bottom nil
+  "when non-nil, character used for the bottom of the guide line."
   :type 'string
   :group 'indent-guide)
 
@@ -191,11 +191,11 @@ the point. When no such points are found, just return nil."
 (defun indent-guide--choose-char (line line-start line-end)
   "Return the appropriate guide character for LINE."
   (if (= line-start line-end)
-      indent-guide-char-middle
+      indent-guide-char
     (cond
-     ((= line line-start) indent-guide-char-top)
-     ((= line line-end) indent-guide-char-bottom)
-     (t indent-guide-char-middle)))
+     ((= line line-start) (or indent-guide-char-top indent-guide-char))
+     ((= line line-end) (or indent-guide-char-bottom indent-guide-char))     
+     (t indent-guide-char)))
   )
 
 ;; * generate guides
