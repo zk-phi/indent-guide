@@ -287,11 +287,11 @@ the point.  When no such points are found, just return nil."
   (interactive)
   ;;; NOTE(arka): redraw only when needed
   (unless (active-minibuffer-window)
-    (indent-guide-remove)
-    
     (let ((win-start (window-start))
           (win-end (window-end nil t))
           line-col line-start line-end)
+      ;;; only clear overlays in the visible viewport
+      (indent-guide-remove win-start win-end)
       ;; decide line-col, line-start
       (save-excursion
         (indent-guide--beginning-of-level)
