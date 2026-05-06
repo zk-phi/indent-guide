@@ -331,15 +331,24 @@ Defaults to the whole buffer if not provided."
 
 ;; * minor-mode
 
+;; use named function to prevent a lambda closure being
+;; allocated repeatedly on every debounce
+(defun indent-guide--run-timer ()
+  (indent-guide-show)
+  (setq indent-guide--timer-object nil))
+
+;; Note(vmargb): the timer now behaves like a proper `debounce'
+;; every new command cancels the old idle timer and schedules a new one
+;; so `indent-guide-show' only runs after the user has paused, not after
+;; the first command in a burst.
 (defun indent-guide-post-command-hook ()
   (if (null indent-guide-delay)
       (indent-guide-show)
-    (when (null indent-guide--timer-object)
-      (setq indent-guide--timer-object
-            (run-with-idle-timer indent-guide-delay nil
-                                 (lambda ()
-                                   (indent-guide-show)
-                                   (setq indent-guide--timer-object nil)))))))
+    (when indent-guide--timer-object
+      (cancel-timer indent-guide--timer-object))
+    (setq indent-guide--timer-object
+          (run-with-idle-timer indent-guide-delay nil
+                               #'indent-guide--run-timer))))
 
 ;;; NOTE(arka): root cause of flickering effect. we don't actually need
 ;;; pre-hook to redraw guides on each command. 
