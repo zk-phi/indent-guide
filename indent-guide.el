@@ -160,21 +160,39 @@ blocks are NOT placed at beginning of line."
          (cons (make-string level ?\s)
                (indent-guide--indentation-candidates (1- level))))))
 
+;; Note(vmargb): `indent-guide--beginning-of-level' is called repeatedly
+;; even within the same indentation level when the cursor is moved around
+;; so we cache and reuse it until the user changes to another indent level
+(defvar-local indent-guide--regex-cache nil
+"Stores the last computed regex with the inputs used to build it.
+Format: ((BASE-LEVEL . TAB-WIDTH) . REGEX-STRING).")
+
 (defun indent-guide--beginning-of-level ()
   "Move to the beginning of current indentation level and return
-the point. When no such points are found, just return nil."
+the point.  When no such points are found, just return nil."
   (back-to-indentation)
   (let* ((base-level (if (not (eolp))
                          (current-column)
                        (max (save-excursion
-                              (skip-chars-forward "\s\t\n")
+                              (skip-chars-forward " \t\n")
                               (current-column))
                             (save-excursion
-                              (skip-chars-backward "\s\t\n")
+                              (skip-chars-backward " \t\n")
                               (back-to-indentation)
                               (current-column)))))
-         (candidates (indent-guide--indentation-candidates (1- base-level)))
-         (regex (concat "^" (regexp-opt candidates t) "[^\s\t\n]")))
+         (cache-key (cons base-level tab-width)) ; key: indent depth & tab width
+         ;; check if current inputs match regex-cache
+         (regex (if (equal (car indent-guide--regex-cache) cache-key)
+                    (cdr indent-guide--regex-cache) ; reuse regex string
+                  ; recompute regex
+                  (let ((candidates (indent-guide--indentation-candidates
+                                     (1- base-level))))
+                    (setq indent-guide--regex-cache
+                          (cons cache-key
+                                (concat "^"
+                                        (regexp-opt candidates t)
+                                        "[^ \t\n]")))
+                    (cdr indent-guide--regex-cache)))))
     (unless (zerop base-level)
       (and (search-backward-regexp regex nil t)
            (goto-char (match-end 1))))))
