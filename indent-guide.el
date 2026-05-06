@@ -145,14 +145,6 @@ blocks are NOT placed at beginning of line."
 
 ;; * utilities
 
-(defun indent-guide--active-overlays ()
-  "Return the list of all overlays created by indent-guide."
-  (delq nil
-        (mapcar
-         (lambda (ov)
-           (and (eq (overlay-get ov 'category) 'indent-guide) ov))
-         (overlays-in (point-min) (point-max)))))
-
 (defun indent-guide--indentation-candidates (level)
   "*Internal function for `indent-guide--beginning-of-level'."
   (cond ((<= level 0)
@@ -219,7 +211,7 @@ the point. When no such points are found, just return nil."
                            (lambda (ov)
                              (when (eq (overlay-get ov 'category) 'indent-guide)
                                ov))
-                           (overlays-in (point) (point))))
+                           (overlays-at (point) (point))))
                  ;; we already have an overlay here => append to the existing overlay
                  ;; (important when "recursive" is enabled)
                  (setq string (let ((str (overlay-get ov 'before-string)))
@@ -312,9 +304,12 @@ the point. When no such points are found, just return nil."
           (indent-guide--make-overlay (+ line-start tmp) line-col line-start line-end))
         (remove-overlays (point) (point) 'category 'indent-guide)))))
 
-(defun indent-guide-remove ()
-  (dolist (ov (indent-guide--active-overlays))
-    (delete-overlay ov)))
+;; use built-in `remove-overlays'
+(defun indent-guide-remove (&optional beg end)
+  "Remove indent-guide overlays between BEG and END.
+Defaults to the whole buffer if not provided."
+  (remove-overlays (or beg (point-min)) (or end (point-max))
+                   'category 'indent-guide))
 
 ;; * minor-mode
 
