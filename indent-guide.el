@@ -145,14 +145,6 @@ blocks are NOT placed at beginning of line."
 
 ;; * utilities
 
-(defun indent-guide--active-overlays ()
-  "Return the list of all overlays created by indent-guide."
-  (delq nil
-        (mapcar
-         (lambda (ov)
-           (and (eq (overlay-get ov 'category) 'indent-guide) ov))
-         (overlays-in (point-min) (point-max)))))
-
 (defun indent-guide--indentation-candidates (level)
   "*Internal function for `indent-guide--beginning-of-level'."
   (cond ((<= level 0)
@@ -168,21 +160,39 @@ blocks are NOT placed at beginning of line."
          (cons (make-string level ?\s)
                (indent-guide--indentation-candidates (1- level))))))
 
+;; Note(vmargb): `indent-guide--beginning-of-level' is called repeatedly
+;; even within the same indentation level when the cursor is moved around
+;; so we cache and reuse it until the user changes to another indent level
+(defvar-local indent-guide--regex-cache nil
+"Stores the last computed regex with the inputs used to build it.
+Format: ((BASE-LEVEL . TAB-WIDTH) . REGEX-STRING).")
+
 (defun indent-guide--beginning-of-level ()
   "Move to the beginning of current indentation level and return
-the point. When no such points are found, just return nil."
+the point.  When no such points are found, just return nil."
   (back-to-indentation)
   (let* ((base-level (if (not (eolp))
                          (current-column)
                        (max (save-excursion
-                              (skip-chars-forward "\s\t\n")
+                              (skip-chars-forward " \t\n")
                               (current-column))
                             (save-excursion
-                              (skip-chars-backward "\s\t\n")
+                              (skip-chars-backward " \t\n")
                               (back-to-indentation)
                               (current-column)))))
-         (candidates (indent-guide--indentation-candidates (1- base-level)))
-         (regex (concat "^" (regexp-opt candidates t) "[^\s\t\n]")))
+         (cache-key (cons base-level tab-width)) ; key: indent depth & tab width
+         ;; check if current inputs match regex-cache
+         (regex (if (equal (car indent-guide--regex-cache) cache-key)
+                    (cdr indent-guide--regex-cache) ; reuse regex string
+                  ; recompute regex
+                  (let ((candidates (indent-guide--indentation-candidates
+                                     (1- base-level))))
+                    (setq indent-guide--regex-cache
+                          (cons cache-key
+                                (concat "^"
+                                        (regexp-opt candidates t)
+                                        "[^ \t\n]")))
+                    (cdr indent-guide--regex-cache)))))
     (unless (zerop base-level)
       (and (search-backward-regexp regex nil t)
            (goto-char (match-end 1))))))
@@ -219,7 +229,7 @@ the point. When no such points are found, just return nil."
                            (lambda (ov)
                              (when (eq (overlay-get ov 'category) 'indent-guide)
                                ov))
-                           (overlays-in (point) (point))))
+                           (overlays-at (point))))
                  ;; we already have an overlay here => append to the existing overlay
                  ;; (important when "recursive" is enabled)
                  (setq string (let ((str (overlay-get ov 'before-string)))
@@ -277,11 +287,11 @@ the point. When no such points are found, just return nil."
   (interactive)
   ;;; NOTE(arka): redraw only when needed
   (unless (active-minibuffer-window)
-    (indent-guide-remove)
-    
     (let ((win-start (window-start))
           (win-end (window-end nil t))
           line-col line-start line-end)
+      ;;; only clear overlays in the visible viewport
+      (indent-guide-remove win-start win-end)
       ;; decide line-col, line-start
       (save-excursion
         (indent-guide--beginning-of-level)
@@ -312,21 +322,33 @@ the point. When no such points are found, just return nil."
           (indent-guide--make-overlay (+ line-start tmp) line-col line-start line-end))
         (remove-overlays (point) (point) 'category 'indent-guide)))))
 
-(defun indent-guide-remove ()
-  (dolist (ov (indent-guide--active-overlays))
-    (delete-overlay ov)))
+;; use built-in `remove-overlays'
+(defun indent-guide-remove (&optional beg end)
+  "Remove indent-guide overlays between BEG and END.
+Defaults to the whole buffer if not provided."
+  (remove-overlays (or beg (point-min)) (or end (point-max))
+                   'category 'indent-guide))
 
 ;; * minor-mode
 
+;; use named function to prevent a lambda closure being
+;; allocated repeatedly on every debounce
+(defun indent-guide--run-timer ()
+  (indent-guide-show)
+  (setq indent-guide--timer-object nil))
+
+;; Note(vmargb): the timer now behaves like a proper `debounce'
+;; every new command cancels the old idle timer and schedules a new one
+;; so `indent-guide-show' only runs after the user has paused, not after
+;; the first command in a burst.
 (defun indent-guide-post-command-hook ()
   (if (null indent-guide-delay)
       (indent-guide-show)
-    (when (null indent-guide--timer-object)
-      (setq indent-guide--timer-object
-            (run-with-idle-timer indent-guide-delay nil
-                                 (lambda ()
-                                   (indent-guide-show)
-                                   (setq indent-guide--timer-object nil)))))))
+    (when indent-guide--timer-object
+      (cancel-timer indent-guide--timer-object))
+    (setq indent-guide--timer-object
+          (run-with-idle-timer indent-guide-delay nil
+                               #'indent-guide--run-timer))))
 
 ;;; NOTE(arka): root cause of flickering effect. we don't actually need
 ;;; pre-hook to redraw guides on each command. 
