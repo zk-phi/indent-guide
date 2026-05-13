@@ -229,7 +229,7 @@ the point.  When no such points are found, just return nil."
                            (lambda (ov)
                              (when (eq (overlay-get ov 'category) 'indent-guide)
                                ov))
-                           (overlays-at (point) (point))))
+                           (overlays-at (point))))
                  ;; we already have an overlay here => append to the existing overlay
                  ;; (important when "recursive" is enabled)
                  (setq string (let ((str (overlay-get ov 'before-string)))
