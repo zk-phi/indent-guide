@@ -70,12 +70,13 @@
 ;; 2.2.0 add option "indent-guide-threshold"
 ;; 2.3.0 use regexp search to find the beginning of level
 ;; 2.3.1 add option "indent-guide-lispy-modes"
+;; 2.4.0 add option "indent-guide-char-top" and "-bottom"
 
 ;;; Code:
 
 (require 'cl-lib)
 
-(defconst indent-guide-version "2.4")
+(defconst indent-guide-version "2.4.0")
 
 ;; * customs
 
@@ -84,7 +85,7 @@
   :group 'environment)
 
 (defcustom indent-guide-char "|"
-  "Character used for the guide line."  
+  "Character used for the guide line."
   :type 'string
   :group 'indent-guide)
 
@@ -204,7 +205,7 @@ the point.  When no such points are found, just return nil."
       indent-guide-char
     (cond
      ((= line line-start) (or indent-guide-char-top indent-guide-char))
-     ((= line line-end) (or indent-guide-char-bottom indent-guide-char))     
+     ((= line line-end) (or indent-guide-char-bottom indent-guide-char))
      (t indent-guide-char)))
   )
 
