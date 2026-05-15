@@ -338,32 +338,18 @@ Defaults to the whole buffer if not provided."
   (indent-guide-show)
   (setq indent-guide--timer-object nil))
 
-;; Note(vmargb): the timer now behaves like a proper `debounce'
-;; every new command cancels the old idle timer and schedules a new one
-;; so `indent-guide-show' only runs after the user has paused, not after
-;; the first command in a burst.
-;; (defun indent-guide-post-command-hook ()
-;;   (if (null indent-guide-delay)
-;;       (indent-guide-show)
-;;     (when indent-guide--timer-object
-;;       (cancel-timer indent-guide--timer-object))
-;;     (setq indent-guide--timer-object
-;;           (run-with-idle-timer indent-guide-delay nil
-;;                                #'indent-guide--run-timer))))
-
 ;;; NOTE(arka): root cause of flickering effect. we don't actually need
-;;; pre-hook to redraw guides on each command. 
+;;; pre-hook to redraw guides on each command.
 ;; (defun indent-guide-pre-command-hook ()
 ;;   ;; some commands' behavior may affected by indent-guide overlays, so
 ;;   ;; remove all overlays in pre-command-hook.
 ;;   (indent-guide-remove))
 
-;;; NOTE(arka): fn to fix flickering effect when scrolling.
-;; (defun indent-guide--window-scroll-hook (&rest _)
-;;   (indent-guide-show))
-
-;; unified redraw request function used by both hooks:
-;; `post-command-hook' & `window-scroll-functions'
+;; Note(vmargb): the timer now behaves like a proper `debounce'
+;; every new command cancels the old idle timer and schedules a new one
+;; so `indent-guide-show' only runs after the user has paused, not after
+;; the first command in a burst.
+;; Used by both hooks: `post-command-hook' & `window-scroll-functions'.
 (defun indent-guide--request-show (&rest _)
   (if (null indent-guide-delay)
       (indent-guide-show) ; no delay, show immediately
