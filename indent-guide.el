@@ -341,14 +341,14 @@ Defaults to the whole buffer if not provided."
 ;; every new command cancels the old idle timer and schedules a new one
 ;; so `indent-guide-show' only runs after the user has paused, not after
 ;; the first command in a burst.
-(defun indent-guide-post-command-hook ()
-  (if (null indent-guide-delay)
-      (indent-guide-show)
-    (when indent-guide--timer-object
-      (cancel-timer indent-guide--timer-object))
-    (setq indent-guide--timer-object
-          (run-with-idle-timer indent-guide-delay nil
-                               #'indent-guide--run-timer))))
+;; (defun indent-guide-post-command-hook ()
+;;   (if (null indent-guide-delay)
+;;       (indent-guide-show)
+;;     (when indent-guide--timer-object
+;;       (cancel-timer indent-guide--timer-object))
+;;     (setq indent-guide--timer-object
+;;           (run-with-idle-timer indent-guide-delay nil
+;;                                #'indent-guide--run-timer))))
 
 ;;; NOTE(arka): root cause of flickering effect. we don't actually need
 ;;; pre-hook to redraw guides on each command. 
@@ -358,8 +358,19 @@ Defaults to the whole buffer if not provided."
 ;;   (indent-guide-remove))
 
 ;;; NOTE(arka): fn to fix flickering effect when scrolling.
-(defun indent-guide--window-scroll-hook (&rest _)
-  (indent-guide-show))
+;; (defun indent-guide--window-scroll-hook (&rest _)
+;;   (indent-guide-show))
+
+;; unified redraw request function used by both hooks:
+;; `post-command-hook' & `window-scroll-functions'
+(defun indent-guide--request-show (&rest _)
+  (if (null indent-guide-delay)
+      (indent-guide-show) ; no delay, show immediately
+    (when indent-guide--timer-object ; is delay, so cancel/debounce
+      (cancel-timer indent-guide--timer-object))
+    (setq indent-guide--timer-object ; schedule new timer
+          (run-with-idle-timer indent-guide-delay nil
+                               #'indent-guide--run-timer))))
 
 ;;;###autoload
 (define-minor-mode indent-guide-mode
@@ -370,10 +381,10 @@ Defaults to the whole buffer if not provided."
   (if indent-guide-mode
       (progn
         ;;; NOTE(arka): only use post-hook. pre-hook is now depricated
-        (add-hook 'post-command-hook 'indent-guide-post-command-hook nil t)
-        (add-hook 'window-scroll-functions 'indent-guide--window-scroll-hook nil t))
-    (remove-hook 'post-command-hook 'indent-guide-post-command-hook t)
-    (remove-hook 'window-scroll-functions 'indent-guide--window-scroll-hook t)))
+        (add-hook 'post-command-hook 'indent-guide--request-show nil t)
+        (add-hook 'window-scroll-functions 'indent-guide--request-show nil t))
+    (remove-hook 'post-command-hook 'indent-guide--request-show t)
+    (remove-hook 'window-scroll-functions 'indent-guide--request-show t)))
 
 ;;;###autoload
 (define-globalized-minor-mode indent-guide-global-mode
