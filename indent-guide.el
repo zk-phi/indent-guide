@@ -105,6 +105,7 @@
     dired-mode
     eww-mode
     eshell-mode
+    helm-major-mode
     Custom-mode)
   "List of major-modes in which indent-guide should be turned off."
   :type '(repeat symbol)
