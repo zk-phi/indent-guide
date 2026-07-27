@@ -18,7 +18,7 @@
 
 ;; Author: zk_phi
 ;; URL: http://zk-phi.github.io/
-;; Version: 2.4
+;; Version: 3.0
 
 ;;; Commentary:
 
@@ -71,12 +71,13 @@
 ;; 2.3.0 use regexp search to find the beginning of level
 ;; 2.3.1 add option "indent-guide-lispy-modes"
 ;; 2.4.0 add option "indent-guide-char-top" and "-bottom"
+;; 3.0.0 single O(V) forward scan for all guides in recursive mode
 
 ;;; Code:
 
 (require 'cl-lib)
 
-(defconst indent-guide-version "2.4.0")
+(defconst indent-guide-version "3.0.0")
 
 ;; * customs
 
@@ -210,6 +211,48 @@ the point.  When no such points are found, just return nil."
      (t indent-guide-char)))
   )
 
+;;; single-pass recursive mode
+;;
+;; NOTE(vmargb): In recursive mode the old code called indent-guide-show
+;; recursively, and each call ran indent-guide--beginning-of-level
+;; (a backward regex search) plus a forward scan to find the block end
+;; which is O(N * B) where B is the backward search distance.
+;; This function replaces all of that with a single O(V)
+;; forward scan over the V visible lines, using a stack to track open
+;; blocks. No regex needed or recursion needed anymore!
+(defun indent-guide--compute-guides (win-start win-end)
+  "Scan from WIN-START to WIN-END and return all indent guides.
+list of (COL LINE-START LINE-END) tuples by maintaining a
+stack of open blocks.  Each entry is (GUIDE-COL . START-LINE)."
+  (let ((guides nil)
+        (stack  nil)
+        (line   (line-number-at-pos win-start))
+        (end    (line-number-at-pos win-end))
+        (prev   0))
+    (save-excursion
+      (goto-char win-start)
+      (setq prev (if (looking-at "[ \t]*$") 0 (current-indentation)))
+      (when (> prev 0)
+        (push (cons prev line) stack))
+      (while (<= line end)
+        (let ((ind (if (looking-at "[ \t]*$") prev (current-indentation))))
+          ;; close guides at or above current indentation
+          (while (and stack (>= (caar stack) ind))
+            (when (<= (cdar stack) (1- line))
+              (push (list (caar stack) (cdar stack) (1- line)) guides))
+            (pop stack))
+          ;; open a new guide on increased indentation
+          (when (and (> ind 0) (or (null stack) (> ind (caar stack))))
+            (push (cons ind (1+ line)) stack))
+          (setq prev ind))
+        (forward-line 1)
+        (setq line (1+ line)))
+      ;; flush guides still open at viewport bottom
+      (dolist (e stack)
+        (when (<= (cdr e) end)
+          (push (list (car e) (cdr e) end) guides))))
+    guides))
+
 ;; * generate guides
 
 ;;; NOTE(arka): extra `line-start` and `line-end` are parameters added for decorated guide line
@@ -285,7 +328,59 @@ the point.  When no such points are found, just return nil."
         (overlay-put ov 'category 'indent-guide)
         (overlay-put ov prop string)))))
 
+;; NOTE(vmargb): uses the original backward-search logic only at
+;; the cursor position. Ensures the function at the cursors guides
+;; remain visible even when the function header has scrolled above the
+;; viewport. Only runs for the CURSORS position (NOT every line), so
+;; the N backward searches here are bounded by the cursor's nesting depth
+;; (typically 2-5), so runtime is still practically linear.
+(defun indent-guide--draw-cursor-ancestry (win-start win-end)
+  "Draw guide lines from WIN-START to WIN-END for the cursors block ancestry.
+Walks up from the cursors current indentation level, drawing each
+ancestor guide clamped to the visible viewport."
+  (let (line-col line-start line-end moved)
+    (save-excursion
+      ;; whether we successfully jumped to a parent level
+      (setq moved (indent-guide--beginning-of-level))
+      (setq line-col   (current-column)
+            line-start (max (1+ (line-number-at-pos))
+                            (line-number-at-pos win-start)))
+      ;; recurse into lower level ONLY if successfully moved (to avoid infinite recursion)
+      (when (and indent-guide-recursive moved (> line-col 0))
+        (indent-guide--draw-cursor-ancestry win-start win-end)))
+    (when (> line-col indent-guide-threshold)
+      ;; decide line-end
+      (save-excursion
+        (while (and (progn (back-to-indentation)
+                           (or (< line-col (current-column)) (eolp)))
+                    (forward-line 1)
+                    (not (eobp))
+                    (<= (point) win-end)))
+        (cond ((< line-col (current-column))
+               (setq line-end (line-number-at-pos)))
+              ((not (memq major-mode indent-guide-lispy-modes))
+               (setq line-end (1- (line-number-at-pos))))
+              (t
+               (skip-chars-backward "\s\t\n")
+               (setq line-end (line-number-at-pos)))))
+      ;; draw line
+      (dotimes (tmp (- (1+ line-end) line-start))
+        (let ((ln (+ line-start tmp)))
+          ;; skip blank lines, overlay placement on whitespace-only
+          ;; lines is unreliable (because it shifts the guide char forward)
+          (unless (save-excursion
+                    (goto-char (point-min))
+                    (forward-line (1- ln))
+                    (looking-at "[ \t]*$"))
+            (indent-guide--make-overlay ln line-col line-start line-end)))))))
+
+;; NOTE(vmargb): indent-guide-show now branches on indent-guide-recursive.
+;; In recursive mode it uses indent-guide--compute-guides (single forward
+;; scan of the viewport) for all visible blocks, but then additionally draws
+;; the cursor's own block ancestry so outer guides stay visible when the
+;; function header *scrolls off-screen*.
 (defun indent-guide-show ()
+  "Show indent-guide lines, for both recursive and non-recursive."
   (interactive)
   ;;; NOTE(arka): redraw only when needed
   (unless (active-minibuffer-window)
@@ -294,35 +389,60 @@ the point.  When no such points are found, just return nil."
           line-col line-start line-end)
       ;;; only clear overlays in the visible viewport
       (indent-guide-remove win-start win-end)
-      ;; decide line-col, line-start
-      (save-excursion
-        (indent-guide--beginning-of-level)
-        (setq line-col (current-column)
-              line-start (max (1+ (line-number-at-pos))
-                              (line-number-at-pos win-start)))
-        ;; if recursive draw is enabled and (line-col > 0), recurse
-        ;; into lower level.
-        (when (and indent-guide-recursive (> line-col 0))
-          (indent-guide-show)))
-      (when (> line-col indent-guide-threshold)
-        ;; decide line-end
+
+      (if indent-guide-recursive
+          (progn
+            ;; single-pass, all guides visible in the viewport
+            (let ((guides (indent-guide--compute-guides win-start win-end)))
+              (dolist (g guides)
+                (let ((col    (nth 0 g))
+                      (lstart (nth 1 g))
+                      (lend   (nth 2 g)))
+                  (when (> col indent-guide-threshold)
+                    (dotimes (i (- (1+ lend) lstart))
+                      (let ((ln (+ lstart i)))
+                        ;; skip blank lines
+                        (unless (save-excursion
+                                  (goto-char (point-min))
+                                  (forward-line (1- ln))
+                                  (looking-at "[ \t]*$"))
+                          (indent-guide--make-overlay ln col lstart lend))))))))
+            ;; cursor ancestry, ensures the enclosing functions guides
+            ;; are drawn even when its header is above the viewport
+            (indent-guide--draw-cursor-ancestry win-start win-end))
+
+        ;; original non-recursive path (unchanged)
+        ;; decide line-col, line-start
         (save-excursion
-          (while (and (progn (back-to-indentation)
-                             (or (< line-col (current-column)) (eolp)))
-                      (forward-line 1)
-                      (not (eobp))
-                      (<= (point) win-end)))
-          (cond ((< line-col (current-column))
-                 (setq line-end (line-number-at-pos)))
-                ((not (memq major-mode indent-guide-lispy-modes))
-                 (setq line-end (1- (line-number-at-pos))))
-                (t
-                 (skip-chars-backward "\s\t\n")
-                 (setq line-end (line-number-at-pos)))))
-        ;; draw line
-        (dotimes (tmp (- (1+ line-end) line-start))
-          (indent-guide--make-overlay (+ line-start tmp) line-col line-start line-end))
-        (remove-overlays (point) (point) 'category 'indent-guide)))))
+          (indent-guide--beginning-of-level)
+          (setq line-col (current-column)
+                line-start (max (1+ (line-number-at-pos))
+                                (line-number-at-pos win-start))))
+        (when (> line-col indent-guide-threshold)
+          ;; decide line-end
+          (save-excursion
+            (while (and (progn (back-to-indentation)
+                               (or (< line-col (current-column)) (eolp)))
+                        (forward-line 1)
+                        (not (eobp))
+                        (<= (point) win-end)))
+            (cond ((< line-col (current-column))
+                   (setq line-end (line-number-at-pos)))
+                  ((not (memq major-mode indent-guide-lispy-modes))
+                   (setq line-end (1- (line-number-at-pos))))
+                  (t
+                   (skip-chars-backward "\s\t\n")
+                   (setq line-end (line-number-at-pos)))))
+          ;; draw line
+          (dotimes (tmp (- (1+ line-end) line-start))
+            (let ((ln (+ line-start tmp)))
+              ;; skip blank lines (same reason as recursive path)
+              (unless (save-excursion
+                        (goto-char (point-min))
+                        (forward-line (1- ln))
+                        (looking-at "[ \t]*$"))
+                (indent-guide--make-overlay ln line-col line-start line-end))))
+          (remove-overlays (point) (point) 'category 'indent-guide))))))
 
 ;; use built-in `remove-overlays'
 (defun indent-guide-remove (&optional beg end)
